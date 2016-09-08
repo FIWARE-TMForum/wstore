@@ -896,7 +896,7 @@ class ChargingEngineTestCase(TestCase):
 
         charging_engine.BillingClient.assert_called_once_with()
         charging_engine.BillingClient().create_charge.assert_called_once_with(
-            self._charge, 'recurring', self._order.contracts[1].product_id, start_date=None, end_date=datetime(2016, 2, 19, 13, 12, 39))
+            self._charge, self._order.contracts[1].product_id, start_date=None, end_date=datetime(2016, 2, 19, 13, 12, 39))
 
         self._validate_subscription_calls()
 
@@ -958,7 +958,7 @@ class ChargingEngineTestCase(TestCase):
 
         charging_engine.BillingClient.assert_called_once_with()
         charging_engine.BillingClient().create_charge.assert_called_once_with(
-            self._charge, 'usage', self._order.contracts[0].product_id, start_date=datetime(2016, 1, 20, 13, 12, 39), end_date=None)
+            self._charge, self._order.contracts[0].product_id, start_date=datetime(2016, 1, 20, 13, 12, 39), end_date=None)
 
     @parameterized.expand([
         ('initial', _set_initial_contracts, _validate_end_initial_payment),
