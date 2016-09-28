@@ -83,15 +83,15 @@ class ResourceRetrievingTestCase(TestCase):
 
     @parameterized.expand([
         ([RESOURCE_DATA1, RESOURCE_DATA2, RESOURCE_DATA3, RESOURCE_DATA4],),
-        ([RESOURCE_DATA1], {"start": 1, "limit": 1}),
-        ([RESOURCE_DATA2, RESOURCE_DATA3], {"start": 2, "limit": 2}),
-        ([], {"start": 6}, ValueError, "Missing required parameter in pagination"),
-        ([], {"limit": 8}, ValueError, "Missing required parameter in pagination"),
-        ([], {"start": 0, "limit": 8}, ValueError, "Invalid pagination limits"),
-        ([], {"start": 2, "limit": 0}, ValueError, "Invalid pagination limits"),
-        ([], {"start": 6, "limit": -1}, ValueError, "Invalid pagination limits"),
-        ([], {"start": -6, "limit": 2}, ValueError, "Invalid pagination limits"),
-        ([], {"start": 0, "limit": 0}, ValueError, "Invalid pagination limits")
+        ([RESOURCE_DATA1], {"offset": 0, "size": 1}),
+        ([RESOURCE_DATA2, RESOURCE_DATA3], {"offset": 1, "size": 2}),
+        ([], {"offset": 5}, ValueError, "Missing required parameter in pagination"),
+        ([], {"size": 8}, ValueError, "Missing required parameter in pagination"),
+        ([], {"offset": -1, "size": 8}, ValueError, "Invalid pagination limits"),
+        ([], {"offset": 1, "size": 0}, ValueError, "Invalid pagination limits"),
+        ([], {"offset": 5, "size": -1}, ValueError, "Invalid pagination limits"),
+        ([], {"offset": -6, "size": 2}, ValueError, "Invalid pagination limits"),
+        ([], {"offset": -1, "size": 0}, ValueError, "Invalid pagination limits")
     ])
     def test_resource_retrieving(self, expected_result, pagination=None, err_type=None, err_msg=None):
 
@@ -109,13 +109,9 @@ class ResourceRetrievingTestCase(TestCase):
     def _not_found(self):
         asset_manager.Resource.objects.get.side_effect = Exception('Not found')
 
-    def _forbidden(self):
-        asset_manager.Resource.objects.get.return_value = self._mock_resource(EXISTING_INFO[0], MagicMock())
-
     @parameterized.expand([
         ('basic', RESOURCE_DATA1, ),
-        ('not_found', [], _not_found, ObjectDoesNotExist, 'The specified digital asset does not exists'),
-        ('forbidden', [], _forbidden, PermissionDenied, 'You are not authorized to retrieve digital asset information')
+        ('not_found', [], _not_found, ObjectDoesNotExist, 'The specified digital asset does not exists')
     ])
     def test_single_asset_retrieving(self, name, expected_result, side_effect=None, err_type=None, err_msg=None):
 
@@ -126,7 +122,7 @@ class ResourceRetrievingTestCase(TestCase):
         result = None
         try:
             am = asset_manager.AssetManager()
-            result = am.get_provider_asset_info(self.user, '111')
+            result = am.get_asset_info('111')
         except Exception as e:
             error = e
 

@@ -155,32 +155,29 @@ class AssetManager:
             'metadata': resource.meta_info
         }
 
-    def get_provider_asset_info(self, provider, asset_id):
+    def get_asset_info(self, asset_id):
         try:
             asset = Resource.objects.get(pk=asset_id)
         except:
             raise ObjectDoesNotExist('The specified digital asset does not exists')
 
-        if asset.provider != provider.userprofile.current_organization:
-            raise PermissionDenied('You are not authorized to retrieve digital asset information')
-
         return self.get_resource_info(asset)
 
     def get_provider_assets_info(self, provider, pagination=None):
 
-        if pagination and ('start' not in pagination or 'limit' not in pagination):
+        if pagination and ('offset' not in pagination or 'size' not in pagination):
             raise ValueError('Missing required parameter in pagination')
 
-        if pagination and (not int(pagination['start']) > 0 or not int(pagination['limit']) > 0):
+        if pagination and (not int(pagination['offset']) >= 0 or not int(pagination['size']) > 0):
             raise ValueError('Invalid pagination limits')
 
         response = []
 
-        resources = Resource.objects.filter(provider=provider.userprofile.current_organization)
+        resources = Resource.objects.filter(provider=provider.current_organization)
 
         if pagination:
-            x = int(pagination['start']) - 1
-            y = x + int(pagination['limit'])
+            x = int(pagination['offset'])
+            y = x + int(pagination['size'])
 
             resources = resources[x:y]
 

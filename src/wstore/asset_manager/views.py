@@ -24,8 +24,10 @@ import json
 
 from django.http import HttpResponse
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
+from django.contrib.auth.models import User
 from wstore.asset_manager.resource_plugins.plugin_error import PluginError
 
+from wstore.models import UserProfile
 from wstore.store_commons.resource import Resource
 from wstore.store_commons.utils.http import build_response, get_content_type, supported_request_mime_types, \
     authentication_required
@@ -38,7 +40,6 @@ from wstore.asset_manager.errors import ProductError
 
 class AssetCollection(Resource):
 
-    @authentication_required
     def read(self, request):
         """
         Retrives the existing digital assets associated with a given seller
@@ -46,21 +47,29 @@ class AssetCollection(Resource):
         :return: JSON List containing the existing assets
         """
 
+        user = request.GET.get('user', None)
+
         pagination = {
-            'start': request.GET.get('start', None),
-            'limit': request.GET.get('limit', None)
+            'offset': request.GET.get('offset', None),
+            'size': request.GET.get('size', None)
         }
-        if pagination['start'] is None or pagination['limit'] is None:
+        if pagination['offset'] is None or pagination['size'] is None:
             pagination = None
 
-        profile = request.user.userprofile
-
-        if 'provider' not in profile.get_current_roles():
-            return build_response(request, 403, 'You are not authorized to retrieve digital asset information')
+        if user is None:
+            if request.user.is_anonymous():
+                return build_response(request, 401, 'Authentication required')
+            user = request.user.userprofile
+        else:
+            try:
+                user_search = User.objects.get(username=user)
+                user = UserProfile.objects.get(user=user_search)
+            except Exception as e:
+                return build_response(request, 404, "User {} not exist, error: {}".format(user, unicode(e)))
 
         try:
             asset_manager = AssetManager()
-            response = asset_manager.get_provider_assets_info(request.user, pagination=pagination)
+            response = asset_manager.get_provider_assets_info(user, pagination=pagination)
         except Exception as e:
             return build_response(request, 400, unicode(e))
 
@@ -69,7 +78,6 @@ class AssetCollection(Resource):
 
 class AssetEntry(Resource):
 
-    @authentication_required
     def read(self, request, asset_id):
         """
         Retrieves the information associated to a given digital asset
@@ -78,12 +86,9 @@ class AssetEntry(Resource):
         :return:
         """
 
-        if 'provider' not in request.user.userprofile.get_current_roles():
-            return build_response(request, 403, 'You are not authorized to retrieve digital asset information')
-
         try:
             asset_manager = AssetManager()
-            response = asset_manager.get_provider_asset_info(request.user, asset_id)
+            response = asset_manager.get_asset_info(asset_id)
         except ObjectDoesNotExist as e:
             return build_response(request, 404, unicode(e))
         except PermissionDenied as e:

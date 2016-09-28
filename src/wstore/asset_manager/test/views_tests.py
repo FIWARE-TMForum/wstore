@@ -31,6 +31,7 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 
 from wstore.asset_manager import views
 from wstore.asset_manager.errors import ProductError
+from wstore.models import UserProfile
 from wstore.store_commons.errors import ConflictError
 
 RESOURCE_DATA = {
@@ -64,6 +65,7 @@ class AssetCollectionTestCase(TestCase):
         self.factory = RequestFactory()
         # Create testing user
         self.user = User.objects.create_user(username='test_user', email='', password='passwd')
+        self.user.is_anonymous = MagicMock(return_value=False)
         self.user.userprofile.get_current_roles = MagicMock(name='get_current_roles')
         self.user.userprofile.get_current_roles.return_value = ['provider', 'customer']
         self.user.userprofile.save()
@@ -71,6 +73,11 @@ class AssetCollectionTestCase(TestCase):
         views.AssetManager = MagicMock()
         self.am_instance = MagicMock()
         views.AssetManager.return_value = self.am_instance
+        views.User = MagicMock()
+        views.User.objects.get.return_value = MagicMock()
+        views.UserProfile = MagicMock()
+        views.UserProfile.objets.get.return_value = MagicMock()
+        views.UserProfile.objets.get().current_organization = 'organization'
 
     @classmethod
     def tearDownClass(cls):
@@ -81,6 +88,9 @@ class AssetCollectionTestCase(TestCase):
         self.user.userprofile.get_current_roles = MagicMock(name='get_current_roles')
         self.user.userprofile.get_current_roles.return_value = ['customer']
         self.user.userprofile.save()
+
+    def _anonymous(self):
+        self.user.is_anonymous.return_value = True
 
     def _call_exception(self):
         self.am_instance.get_provider_assets_info.side_effect = Exception('Getting resources error')
@@ -95,14 +105,19 @@ class AssetCollectionTestCase(TestCase):
             'name': 'test_resource',
             'provider': 'test_user',
             'version': '1.0'
+        }], None, 200, None, None, "user"),
+        ([{
+            'name': 'test_resource',
+            'provider': 'test_user',
+            'version': '1.0'
         }], None, 200, None, {
-            'start': '1',
-            'limit': '1'
+            'offset': '1',
+            'size': '1'
         }),
-        ([], _no_provider, 403, 'You are not authorized to retrieve digital asset information'),
+        ([], _anonymous, 401, 'Authentication required'),
         ([], _call_exception, 400, 'Getting resources error')
     ])
-    def test_get_assets(self, return_value, side_effect=None, code=200, error_msg=None, pagination=None):
+    def test_get_assets(self, return_value, side_effect=None, code=200, error_msg=None, pagination=None, user=None):
 
         # Mock get asset_manager method
         resource_collection = views.AssetCollection(permitted_methods=('GET',))
@@ -112,7 +127,10 @@ class AssetCollectionTestCase(TestCase):
         path = '/api/offering/resources'
 
         if pagination is not None:
-            path += '?start=' + pagination['start'] + '&limit=' + pagination['limit']
+            path += '?offset=' + pagination['offset'] + '&size=' + pagination['size']
+
+        if user is not None:
+            path += "{}user={}".format("&" if "?" in path else "?", user)
 
         request = self.factory.get(path, HTTP_ACCEPT='application/json')
 
@@ -121,6 +139,9 @@ class AssetCollectionTestCase(TestCase):
         # Create the side effect if needed
         if side_effect:
             side_effect(self)
+
+        views.User.reset_mock()
+        views.UserProfile.reset_mock()
 
         # Call the view
         response = resource_collection.read(request)
@@ -131,7 +152,11 @@ class AssetCollectionTestCase(TestCase):
 
         if not error_msg:
             views.AssetManager.assert_called_once_with()
-            self.am_instance.get_provider_assets_info.assert_called_once_with(self.user, pagination=pagination)
+            if user is not None:
+                views.User.objects.get.assert_called_with(username=user)
+                views.UserProfile.objects.get.assert_called_with(user=views.User.objects.get())
+            user_called = self.user.userprofile if user is None else views.UserProfile.objects.get()
+            self.am_instance.get_provider_assets_info.assert_called_once_with(user_called, pagination=pagination)
             self.assertEquals(type(body_response), list)
             self.assertEquals(body_response, return_value)
         else:
@@ -140,30 +165,19 @@ class AssetCollectionTestCase(TestCase):
             self.assertEqual(body_response['result'], 'error')
 
     def _not_found_asset(self):
-        self.am_instance.get_provider_asset_info.side_effect = ObjectDoesNotExist('Not found')
-
-    def _not_owner_provider(self):
-        self.am_instance.get_provider_asset_info.side_effect = PermissionDenied('Not authorized')
+        self.am_instance.get_asset_info.side_effect = ObjectDoesNotExist('Not found')
 
     def _call_exception_single(self):
-        self.am_instance.get_provider_asset_info.side_effect = Exception('Getting resources error')
+        self.am_instance.get_asset_info.side_effect = Exception('Getting resources error')
 
     @parameterized.expand([
         ('basic', {
             'id': '1111'
         }, 200),
-        ('no_provider', {
-            'error': 'You are not authorized to retrieve digital asset information',
-            'result': 'error'
-        }, 403, _no_provider, False),
         ('not_found', {
             'error': 'Not found',
             'result': 'error'
         }, 404, _not_found_asset),
-        ('forbidden', {
-            'error': 'Not authorized',
-            'result': 'error'
-        }, 403, _not_owner_provider),
         ('exception', {
             'error': 'An unexpected error occurred',
             'result': 'error'
@@ -171,7 +185,7 @@ class AssetCollectionTestCase(TestCase):
     ])
     def test_get_asset(self, name, exp_value, exp_code, side_effect=None, called=True):
         resource_entry = views.AssetEntry(permitted_methods=('GET',))
-        self.am_instance.get_provider_asset_info.return_value = exp_value
+        self.am_instance.get_asset_info.return_value = exp_value
 
         if side_effect is not None:
             side_effect(self)
@@ -187,9 +201,9 @@ class AssetCollectionTestCase(TestCase):
         self.assertEquals(body_response, exp_value)
 
         if called:
-            self.am_instance.get_provider_asset_info.assert_called_once_with(self.user, '1111')
+            self.am_instance.get_asset_info.assert_called_once_with('1111')
         else:
-            self.assertEquals(self.am_instance.get_provider_asset_info.call_count, 0)
+            self.assertEquals(self.am_instance.get_asset_info.call_count, 0)
 
     def _creation_exception(self):
         self.am_instance.upload_asset.side_effect = Exception('Resource creation exception')
