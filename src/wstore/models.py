@@ -79,21 +79,14 @@ from wstore.asset_manager.models import Resource, ResourcePlugin
 class UserProfile(models.Model):
 
     user = models.OneToOneField(User)
-    organizations = ListField()
     current_organization = models.ForeignKey(Organization)
     complete_name = models.CharField(max_length=100)
     actor_id = models.CharField(null=True, blank=True, max_length=100)
-
+    current_roles = ListField()
     access_token = models.CharField(max_length=150, null=True, blank=True)
 
     def get_current_roles(self):
-        roles = []
-        for o in self.organizations:
-            if o['organization'] == self.current_organization.pk:
-                roles = o['roles']
-                break
-
-        return roles
+        return self.current_roles
 
     def is_user_org(self):
 
