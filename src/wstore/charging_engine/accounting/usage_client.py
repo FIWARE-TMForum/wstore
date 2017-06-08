@@ -22,7 +22,7 @@
 from __future__ import unicode_literals
 
 import requests
-from urlparse import urljoin
+from urlparse import urljoin, urlparse
 
 from django.conf import settings
 
@@ -30,7 +30,7 @@ from wstore.charging_engine.accounting.errors import UsageError
 from wstore.models import Context
 
 
-class UsageClient:
+class UsageClient(object):
 
     def __init__(self):
         self._usage_api = settings.USAGE
@@ -51,6 +51,50 @@ class UsageClient:
                 break
 
         return belongs
+
+    def _create_usage_item(self, url, usage_item):
+        # Override the needed headers to avoid spec hrefs to be created with internal host and port
+        headers = {
+            'Host': urlparse(Context.objects.all()[0].site.domain).netloc
+        }
+
+        r = requests.post(url, headers=headers, json=usage_item)
+        r.raise_for_status()
+
+        return r.json()
+
+    def create_usage_spec(self, usage_spec):
+        """
+        Creates a new usage specification in the usage API
+        :param usage_spec: usage specification to be created
+        :return: the created usage specification
+        """
+        path = 'api/usageManagement/v2/usageSpecification/'
+        url = urljoin(self._usage_api, path)
+
+        return self._create_usage_item(url, usage_spec)
+
+    def create_usage(self, usage):
+        """
+        Creates a new usage document in the usage API
+        :param usage: usage document to be created
+        :return:the created usage document
+        """
+        path = 'api/usageManagement/v2/usage/'
+        url = urljoin(self._usage_api, path)
+
+        return self._create_usage_item(url, usage)
+
+    def delete_usage_spec(self, spec_id):
+        """
+        Deletes a usage specification from the usage API
+        :param spec_id: id of the usage specification to be deleted
+        """
+        path = 'api/usageManagement/v2/usageSpecification/' + spec_id
+        url = urljoin(self._usage_api, path)
+
+        r = requests.delete(url)
+        r.raise_for_status()
 
     def get_customer_usage(self, customer, product_id, state=None):
         """

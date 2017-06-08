@@ -68,18 +68,9 @@ class Organization(models.Model):
 
     expenditure_limits = DictField()
 
-    def has_rated_offering(self, user, offering):
-        """
-        Check if the user has rated an offering on behalf the
-        organization
-        """
-        found = False
-        for rate in self.rated_offerings:
-            if rate['user'] == user.pk and rate['offering'] == offering.pk:
-                found = True
-                break
-
-        return found
+    def get_party_url(self):
+        party_type = 'individual' if self.private else 'organization'
+        return Context.objects.all()[0].site.domain + '/partyManagement/' + party_type + '/' + self.name
 
 
 from wstore.asset_manager.models import Resource, ResourcePlugin

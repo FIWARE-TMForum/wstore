@@ -202,6 +202,16 @@ INVALID_VERSION = {
     "formats": ["FILE", "URL"]
 }
 
+INVALID_ACCOUNTING = {
+    "name": "plugin name",
+    "author": "test author",
+    "version": "1.0",
+    "module": "test.TestPlugin",
+    "media_types": ["text/plain"],
+    "formats": ["FILE", "URL"],
+    "pull_accounting": "true"
+}
+
 BASIC_PLUGIN_DATA = {
     "name": "plugin name",
     "author": "test author",

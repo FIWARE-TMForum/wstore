@@ -180,6 +180,9 @@ class PluginValidator():
         if reason is None and not is_valid_version(plugin_info['version']):
             reason = 'Invalid format in plugin version'
 
+        if reason is None and 'pull_accounting' in plugin_info and not isinstance(plugin_info['pull_accounting'], bool):
+            reason = 'Plugin pull_accounting property must be a boolean'
+
         if reason is None and 'form' in plugin_info:
             if not isinstance(plugin_info['form'], dict):
                 reason = 'Invalid format in form field, must be an object'

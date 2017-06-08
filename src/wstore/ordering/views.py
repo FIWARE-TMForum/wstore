@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 - 2016 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2015 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -32,7 +32,7 @@ from wstore.ordering.inventory_client import InventoryClient
 from wstore.store_commons.resource import Resource
 from wstore.store_commons.utils.http import build_response, supported_request_mime_types, authentication_required
 from wstore.ordering.models import Order
-from wstore.asset_manager.resource_plugins.decorators import on_product_acquired
+from wstore.asset_manager.resource_plugins.decorators import on_product_acquired, on_usage_refreshed
 
 
 class OrderingCollection(Resource):
@@ -181,6 +181,9 @@ class RenovationCollection(Resource):
             contract = order.get_product_contract(task['id'])
         except:
             return build_response(request, 404, 'The specified product id is not valid')
+
+        # Refresh accounting information
+        on_usage_refreshed(order, contract)
 
         # Build charging engine
         charging_engine = ChargingEngine(order)

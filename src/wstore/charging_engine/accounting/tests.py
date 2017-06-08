@@ -20,6 +20,8 @@
 
 from __future__ import unicode_literals
 
+import json
+
 from copy import deepcopy
 from datetime import datetime
 from mock import MagicMock
@@ -31,6 +33,7 @@ from django.core.exceptions import PermissionDenied
 from wstore.charging_engine.accounting import sdr_manager
 from wstore.charging_engine.accounting import usage_client
 from wstore.charging_engine.accounting.errors import UsageError
+from wstore.charging_engine.accounting import views
 
 BASIC_SDR = {
     'status': 'Received',
@@ -363,3 +366,102 @@ class UsageClientTestCase(TestCase):
             client.rate_usage,
             (BASIC_USAGE['id'], timestamp, duty_free, price, rate, currency, self._product_id)
         )
+
+
+MANAGER_DENIED_RESP = {
+    'result': 'error',
+    'error': 'Permission denied'
+}
+
+MANAGER_VALUE_RESP = {
+    'result': 'error',
+    'error': 'Value error'
+}
+
+
+class SDRCollectionTestCase(TestCase):
+
+    tags = ('sdr',)
+
+    def setUp(self):
+        views.Order = MagicMock()
+        views.SDRManager = MagicMock()
+
+        self._manager_inst = MagicMock()
+        views.SDRManager.return_value = self._manager_inst
+
+        usage_inst = MagicMock()
+        views.UsageClient = MagicMock()
+        views.UsageClient.return_value = usage_inst
+
+        self.request = MagicMock()
+        self.request.user.is_anonymous.return_value = False
+        self.request.META.get.return_value = 'application/json'
+        self.request.GET.get.return_value = None
+
+    def _inv_order(self):
+        views.Order.objects.get.side_effect = Exception('Not found')
+
+    def _inv_product(self):
+        views.Order.objects.get().get_product_contract.side_effect = Exception('Not found')
+
+    def _permission_denied(self):
+        self._manager_inst.validate_sdr.side_effect = PermissionDenied('Permission denied')
+
+    def _value_error(self):
+        self._manager_inst.validate_sdr.side_effect = ValueError('Value error')
+
+    def _exception(self):
+        self._manager_inst.validate_sdr.side_effect = Exception('error')
+
+    def _validate_response(self, response, exp_code, exp_response):
+        # Validate response
+        self.assertEquals(exp_code, response.status_code)
+        body = json.loads(response.content)
+
+        self.assertEquals(exp_response, body)
+
+    @parameterized.expand([
+        ('correct', BASIC_SDR, 200, {
+            'result': 'correct',
+            'message': 'OK'
+        }),
+        ('invalid_json', 'invalid', 400, {
+            'result': 'error',
+            'error': 'The request does not contain a valid JSON object'
+        }),
+        ('manager_permission_denied', BASIC_SDR, 403, MANAGER_DENIED_RESP, _permission_denied),
+        ('manager_value_error', BASIC_SDR, 422, MANAGER_VALUE_RESP, _value_error),
+        ('manager_exception', BASIC_SDR, 500, {
+            'result': 'error',
+            'error': 'The SDR document could not be processed due to an unexpected error'
+        }, _exception)
+    ])
+    def test_feed_sdr(self, name, prov_data, exp_code, exp_response, side_effect=None):
+
+        if isinstance(prov_data, dict):
+            data = deepcopy(prov_data)
+            data['id'] = '1'
+            data = json.dumps(data)
+        else:
+            data = prov_data
+
+        self.request.body = data
+
+        if side_effect is not None:
+            side_effect(self)
+
+        collection = views.ServiceRecordCollection(permitted_methods=('POST',))
+        response = collection.create(self.request)
+
+        self._validate_response(response, exp_code, exp_response)
+        if exp_code != 400:
+            parsed_data = json.loads(data)
+            if exp_code == 200:
+                views.SDRManager.assert_called_once_with()
+                self._manager_inst.validate_sdr.assert_called_once_with(parsed_data)
+                views.UsageClient().update_usage_state.assert_called_once_with('1', 'Guided')
+                self._manager_inst.update_usage.assert_called_once_with()
+            else:
+                views.UsageClient().update_usage_state.assert_called_once_with('1', 'Rejected')
+                self.assertEquals(0, self._manager_inst.update_usage.call_count)

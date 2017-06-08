@@ -30,6 +30,7 @@ from django.test.utils import override_settings
 
 from wstore.asset_manager import asset_manager
 from wstore.asset_manager.test.resource_test_data import *
+from wstore.asset_manager import models
 from wstore.store_commons.errors import ConflictError
 from wstore.store_commons.utils.testing import decorator_mock
 
@@ -483,3 +484,32 @@ class UploadAssetTestCase(TestCase):
         self.assertTrue(isinstance(error, err_type))
         self.assertEquals(err_msg, unicode(error))
 
+
+class ResourceModelTestCase(TestCase):
+    tags = ('resource-model', )
+
+    def test_resource_model(self):
+        models.Context = MagicMock()
+        ctx = MagicMock()
+        ctx.site.domain = 'http://testserver.com/'
+
+        models.Context.objects.all.return_value = [ctx]
+
+        url = 'http://example.com/media/resource'
+
+        from wstore.models import Organization
+        org = Organization.objects.create(name='Test')
+
+        res = models.Resource.objects.create(
+            provider=org,
+            version='1.0',
+            download_link=url,
+            resource_path='',
+            content_type='',
+            resource_type='',
+            state=''
+        )
+
+        uri = 'http://testserver.com/charging/api/assetManagement/assets/' + res.pk
+        self.assertEquals(url, res.get_url())
+        self.assertEquals(uri, res.get_uri())
