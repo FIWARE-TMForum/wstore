@@ -41,7 +41,8 @@ class AuthenticationMiddlewareTestCase(TestCase):
         self.request = MagicMock()
         self.request.META = {
             'HTTP_X_NICK_NAME': 'test-user',
-            'HTTP_X_DISPLAY_NAME': 'Test user'
+            'HTTP_X_DISPLAY_NAME': 'Test user',
+            'HTTP_X_ACTOR': 'test-user'
         }
 
         self._user_model = MagicMock()
@@ -57,6 +58,7 @@ class AuthenticationMiddlewareTestCase(TestCase):
         self._org_instance = MagicMock()
         self._org_instance.pk = 'org'
         self._org_model.objects.get.return_value = self._org_instance
+        self._org_model.objects.create.return_value = self._org_instance
 
         wstore.models.Organization = self._org_model
 
@@ -112,18 +114,44 @@ class AuthenticationMiddlewareTestCase(TestCase):
             self.assertEquals(self._user_inst.is_staff, staff)
 
             self._org_model.objects.get.assert_called_once_with(name='test-user')
-            self.assertEquals([{'organization': 'org', 'roles': expected_roles}], self._user_inst.userprofile.organizations)
 
             self.assertEquals('user@email.com', self._user_inst.email)
             self.assertEquals('1234567890abcdf', self._user_inst.userprofile.access_token)
             self.assertEquals('Test user', self._user_inst.userprofile.complete_name)
             self.assertEquals('test-user', self._user_inst.userprofile.actor_id)
 
+            self.assertEquals(expected_roles, self._user_inst.userprofile.current_roles)
+            self.assertEquals(self._org_instance, self._user_inst.userprofile.current_organization)
+
+            self._org_instance.save.assert_called_once_with()
             self._user_inst.userprofile.save.assert_called_once_with()
             self._user_inst.save.assert_called_once_with()
 
         else:
             self.assertEquals(AnonymousUser(), user)
+
+    def test_get_api_user_org(self):
+        self.request.META = {
+            'HTTP_X_NICK_NAME': '000000000000023',
+            'HTTP_X_DISPLAY_NAME': 'Test Org',
+            'HTTP_X_ACTOR': 'test-user',
+            'HTTP_X_ROLES': 'customer',
+            'HTTP_AUTHORIZATION': 'Bearer 1234567890abcdf',
+            'HTTP_X_EMAIL': 'org@email.com'
+        }
+        self._org_model.objects.get.side_effect = Exception('Not found')
+
+        user = middleware.get_api_user(self.request)
+
+        self.assertEquals(self._user_inst, user)
+        self._org_model.objects.create.assert_called_once_with(name='000000000000023')
+
+        self.assertEquals(['customer'], self._user_inst.userprofile.current_roles)
+        self.assertEquals(self._org_instance, self._user_inst.userprofile.current_organization)
+
+        self.assertFalse(self._org_instance.private)
+        self._org_instance.save.assert_called_once_with()
+        self._user_inst.userprofile.save.assert_called_once_with()
 
 
 class RollbackTestCase(TestCase):

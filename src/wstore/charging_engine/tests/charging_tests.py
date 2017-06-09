@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 - 2016 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2015 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -1085,6 +1085,7 @@ class PayPalConfirmationTestCase(TestCase):
         self._order_inst = MagicMock()
         self._order_inst.order_id = '1'
         self._order_inst.owner_organization = org
+        self._order_inst.customer = self.user
         self._order_inst.state = 'pending'
         self._order_inst.pending_payment = {
             'transactions': [{

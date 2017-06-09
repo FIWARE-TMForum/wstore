@@ -122,7 +122,7 @@ class PayPalConfirmation(Resource):
                 raise PaymentError('The timeout set to process the payment has finished')
 
             # Check that the request user is authorized to end the payment
-            if request.user.userprofile.current_organization != order.owner_organization:
+            if request.user.userprofile.current_organization != order.owner_organization or request.user != order.customer:
                 raise PaymentError('You are not authorized to execute the payment')
 
             transactions = pending_info['transactions']

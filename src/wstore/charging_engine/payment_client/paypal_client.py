@@ -57,6 +57,14 @@ class PayPalClient(PaymentClient):
         if url[-1] != '/':
             url += '/'
 
+        return_url = url + 'payment?action=accept&ref=' + self._order.pk
+        cancel_url = url + 'payment?action=cancel&ref=' + self._order.pk
+
+        if not self._order.owner_organization.private:
+            # The request has been made on behalf an organization
+            return_url += '&organization=' + self._order.owner_organization.name
+            cancel_url += '&organization=' + self._order.owner_organization.name
+
         # Build payment object
         payment = paypalrestsdk.Payment({
             'intent': 'sale',
@@ -64,8 +72,8 @@ class PayPalClient(PaymentClient):
                 'payment_method': 'paypal'
             },
             'redirect_urls': {
-                'return_url': url + 'payment?action=accept&ref=' + self._order.pk,
-                'cancel_url': url + 'payment?action=cancel&ref=' + self._order.pk
+                'return_url': return_url,
+                'cancel_url': cancel_url
             },
             'transactions': [{
                 'amount': {

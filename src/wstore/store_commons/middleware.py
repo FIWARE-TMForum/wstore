@@ -156,22 +156,27 @@ def get_api_user(request):
         user.userprofile.complete_name = display_name
         user.userprofile.actor_id = nick_name
         user.is_staff = settings.ADMIN_ROLE.lower() in roles
+        user.save()
+
     user.userprofile.access_token = token_info[1]
     user_roles = []
+
     if settings.PROVIDER_ROLE in roles:
         user_roles.append('provider')
+
     if settings.CUSTOMER_ROLE in roles:
         user_roles.append('customer')
 
-    # Get user private organization
+    # Get or create current organization
     try:
         org = Organization.objects.get(name=nick_name)
     except:
         org = Organization.objects.create(name=nick_name)
 
+    org.private = nick_name == user_name
+    org.save()
+
     user.userprofile.current_roles = user_roles
-    
-    user.save()
     user.userprofile.current_organization = org
 
     # change user.userprofile.current_organization

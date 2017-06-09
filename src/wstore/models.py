@@ -88,20 +88,6 @@ class UserProfile(models.Model):
     def get_current_roles(self):
         return self.current_roles
 
-    def is_user_org(self):
-
-        result = False
-        # Use the actor_id for identify the user organization
-        # in order to avoid problems with nickname changes
-        if self.actor_id and self.current_organization.actor_id:
-            if self.actor_id == self.current_organization.actor_id:
-                result = True
-        else:
-            if self.user.username == self.current_organization.name:
-                result = True
-
-        return result
-
 
 def create_user_profile(sender, instance, created, **kwargs):
 
@@ -113,10 +99,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 
         profile, created = UserProfile.objects.get_or_create(
             user=instance,
-            organizations=[{
-                'organization': default_organization[0].pk,
-                'roles': ['customer', 'developer']
-            }],
+            current_roles=['customer'],
             current_organization=default_organization[0]
         )
         if instance.first_name and instance.last_name:
