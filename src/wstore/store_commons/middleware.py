@@ -126,7 +126,6 @@ class URLMiddleware(object):
 
 
 def get_api_user(request):
-
     from django.contrib.auth.models import AnonymousUser
     from django.conf import settings
     from wstore.models import Organization, User
@@ -138,6 +137,7 @@ def get_api_user(request):
         display_name = request.META['HTTP_X_DISPLAY_NAME']
         email = request.META['HTTP_X_EMAIL']
         roles = request.META['HTTP_X_ROLES'].split(',')
+        user_name = request.META['HTTP_X_ACTOR']
     except:
         return AnonymousUser()
 
@@ -146,33 +146,40 @@ def get_api_user(request):
 
     # Check if the user already exist
     try:
-        user = User.objects.get(username=nick_name)
+        user = User.objects.get(username=user_name)
     except:
-        user = User.objects.create(username=nick_name)
+        user = User.objects.create(username=user_name)
 
-    # Update user info
-    user.email = email
+    if nick_name == user_name:
+        # Update user info
+        user.email = email
+        user.userprofile.complete_name = display_name
+        user.userprofile.actor_id = nick_name
+        user.is_staff = settings.ADMIN_ROLE.lower() in roles
+        user.save()
+
     user.userprofile.access_token = token_info[1]
-    user.userprofile.complete_name = display_name
-    user.userprofile.actor_id = nick_name
-
-    user.is_staff = settings.ADMIN_ROLE.lower() in roles
-
     user_roles = []
+
     if settings.PROVIDER_ROLE in roles:
         user_roles.append('provider')
 
     if settings.CUSTOMER_ROLE in roles:
         user_roles.append('customer')
 
-    # Get user private organization
-    user_org = Organization.objects.get(name=user.username)
-    user.userprofile.organizations = [{
-        'organization': user_org.pk,
-        'roles': user_roles
-    }]
+    # Get or create current organization
+    try:
+        org = Organization.objects.get(name=nick_name)
+    except:
+        org = Organization.objects.create(name=nick_name)
 
-    user.save()
+    org.private = nick_name == user_name
+    org.save()
+
+    user.userprofile.current_roles = user_roles
+    user.userprofile.current_organization = org
+
+    # change user.userprofile.current_organization
     user.userprofile.save()
 
     return user

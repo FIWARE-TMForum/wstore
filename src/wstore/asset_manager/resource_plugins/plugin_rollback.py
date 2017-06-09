@@ -27,7 +27,7 @@ from functools import wraps
 
 def installPluginRollback(func):
 
-    class Logger():
+    class Logger(object):
         _state = {}
 
         def get_state(self):
@@ -45,6 +45,9 @@ def installPluginRollback(func):
             # Remove directory if existing
             if 'PATH' in logger.get_state():
                 rmtree(logger.get_state()['PATH'], True)
+
+            if 'MODEL' in logger.get_state():
+                logger.get_state()['MODEL'].delete()
 
             # Raise the exception
             raise(e)

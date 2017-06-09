@@ -223,7 +223,14 @@ class OrderingManager:
     def _get_billing_address(self, items):
 
         def _download_asset(url):
-            r = requests.get(url, headers={'Authorization': 'Bearer ' + self._customer.userprofile.access_token })
+            headers = {
+                'Authorization': 'Bearer ' + self._customer.userprofile.access_token
+            }
+
+            if not self._customer.userprofile.current_organization.private:
+                headers['x-organization'] = self._customer.userprofile.current_organization.name
+
+            r = requests.get(url, headers=headers)
 
             if r.status_code != 200:
                 raise OrderingError('There was an error at the time of retrieving the Billing Address')

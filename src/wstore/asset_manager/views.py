@@ -42,7 +42,7 @@ class AssetCollection(Resource):
 
     def read(self, request):
         """
-        Retrives the existing digital assets associated with a given seller
+        Retrieves the existing digital assets associated with a given seller
         :param request:
         :return: JSON List containing the existing assets
         """
@@ -100,7 +100,7 @@ class AssetEntry(Resource):
 
 
 class AssetEntryFromProduct(Resource):
-    def read(selg, request, product_id):
+    def read(self, request, product_id):
         """
         Retrieves the assets from a product
         :param request:
@@ -190,6 +190,8 @@ def _validate_catalog_element(request, element, validator):
         return build_response(request, 400, unicode(e))
     except ProductError as e:
         return build_response(request, 400, unicode(e))
+    except ConflictError as e:
+        return build_response(request, 409, unicode(e))
     except PluginError as e:
         return build_response(request, 422, unicode(e))
     except PermissionDenied as e:

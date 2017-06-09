@@ -26,7 +26,6 @@ import importlib
 from bson import ObjectId
 
 from django.conf import settings
-from django.core.exceptions import PermissionDenied
 from wstore.charging_engine.charging.cdr_manager import CDRManager
 
 from wstore.ordering.inventory_client import InventoryClient
@@ -36,49 +35,8 @@ from wstore.store_commons.utils.http import build_response, supported_request_mi
 from wstore.ordering.models import Order
 from wstore.ordering.errors import PaymentError
 from wstore.charging_engine.charging_engine import ChargingEngine
-from wstore.charging_engine.accounting.sdr_manager import SDRManager
 from wstore.store_commons.database import get_database_connection
-from wstore.charging_engine.accounting.usage_client import UsageClient
 from wstore.asset_manager.resource_plugins.decorators import on_product_acquired
-
-
-class ServiceRecordCollection(Resource):
-
-    # This method is used to load SDR documents and
-    # start the charging process
-    @supported_request_mime_types(('application/json',))
-    def create(self, request):
-        try:
-            # Extract SDR document from the HTTP request
-            data = json.loads(request.body)
-        except:
-            # The usage document is not valid, so the state cannot be changed
-            return build_response(request, 400, 'The request does not contain a valid JSON object')
-
-        # Validate usage information
-        response = None
-        sdr_manager = SDRManager()
-        try:
-            sdr_manager.validate_sdr(data)
-        except PermissionDenied as e:
-            response = build_response(request, 403, unicode(e))
-        except ValueError as e:
-            response = build_response(request, 422, unicode(e))
-        except:
-            response = build_response(request, 500, 'The SDR document could not be processed due to an unexpected error')
-
-        usage_client = UsageClient()
-        if response is not None:
-            # The usage document is not valid, change its state to Rejected
-            usage_client.update_usage_state(data['id'], 'Rejected')
-        else:
-            # The usage document is valid, change its state to Guided
-            usage_client.update_usage_state(data['id'], 'Guided')
-            sdr_manager.update_usage()
-            response = build_response(request, 200, 'OK')
-
-        # Update usage document state
-        return response
 
 
 class PayPalConfirmation(Resource):
@@ -164,7 +122,7 @@ class PayPalConfirmation(Resource):
                 raise PaymentError('The timeout set to process the payment has finished')
 
             # Check that the request user is authorized to end the payment
-            if request.user.userprofile.current_organization != order.owner_organization:
+            if request.user.userprofile.current_organization != order.owner_organization or request.user != order.customer:
                 raise PaymentError('You are not authorized to execute the payment')
 
             transactions = pending_info['transactions']

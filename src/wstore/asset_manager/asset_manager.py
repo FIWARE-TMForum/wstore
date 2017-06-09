@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013 - 2016 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2013 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -21,16 +21,17 @@
 from __future__ import unicode_literals
 
 import base64
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 import os
 from urlparse import urljoin
 
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 
-from wstore.models import Resource, Context
+from wstore.models import Resource, ResourcePlugin, Context
+from wstore.store_commons.errors import ConflictError
 from wstore.store_commons.rollback import rollback
 from wstore.store_commons.utils.name import is_valid_file
-from wstore.store_commons.errors import ConflictError
+from wstore.store_commons.utils.url import is_valid_url
 
 
 class AssetManager:
@@ -67,7 +68,7 @@ class AssetManager:
         # Check if the file already exists
         if os.path.exists(file_path):
             res = Resource.objects.get(resource_path=resource_path)
-            if len(res.state):
+            if res.product_id is not None:
                 # If the resource has state field, it means that a product
                 # spec has been created, so it cannot be overridden
                 raise ConflictError('The provided digital asset (' + file_name + ') already exists')
@@ -79,7 +80,8 @@ class AssetManager:
 
         self.rollback_logger['files'].append(file_path)
 
-        return resource_path
+        site = Context.objects.all()[0].site.domain
+        return resource_path, urljoin(site, '/charging/' + resource_path)
 
     def _create_resource_model(self, provider, resource_data):
         # Create the resource
@@ -98,30 +100,110 @@ class AssetManager:
 
         return resource
 
+    def _validate_asset_type(self, resource_type, content_type, provided_as, metadata):
+
+        if not resource_type and metadata:
+            raise ValueError('You have to specify a valid asset type for providing meta data')
+
+        if not resource_type:
+            return
+
+        plugins = ResourcePlugin.objects.filter(name=resource_type)
+        if not len(plugins):
+            raise ObjectDoesNotExist('The asset type ' + resource_type + ' does not exists')
+
+        asset_type = plugins[0]
+
+        # Validate content type
+        if len(asset_type.media_types) and content_type not in asset_type.media_types:
+            raise ValueError('The content type ' + content_type + ' is not valid for the specified asset type')
+
+        # Validate providing method
+        if provided_as not in asset_type.formats:
+            raise ValueError(
+                'The format used for providing the digital asset (' +
+                provided_as + ') is not valid for the given asset type')
+
+        # Validate that the included metadata is valid according to the form field
+        if metadata and not asset_type.form:
+            raise ValueError('The specified asset type does not allow meta data')
+
+        if asset_type.form:
+
+            for k, v in asset_type.form.iteritems():
+                # Validate mandatory fields
+                if 'mandatory' in v and v['mandatory'] and 'default' not in v and k not in metadata:
+                    raise ValueError('Missing mandatory field ' + k + ' in metadata')
+
+                # Validate metadata types
+                if k in metadata and v['type'] != 'checkbox' and not (isinstance(metadata[k], str) or isinstance(metadata[k], unicode)):
+                    raise TypeError('Metadata field ' + k + ' must be a string')
+
+                if k in metadata and v['type'] == 'checkbox' and not isinstance(metadata[k], bool):
+                    raise TypeError('Metadata field ' + k + ' must be a boolean')
+
+                if k in metadata and v['type'] == 'select' and metadata[k].lower() not in [option['value'].lower() for option in v['options']]:
+                    raise ValueError('Metadata field ' + k + ' value is not one of the available options')
+
+                # Include default values
+                if k not in metadata and 'default' in v:
+                    metadata[k] = v['default']
+
     def _load_resource_info(self, provider, data, file_=None):
 
-        # This information will be extracted from the product specification
         resource_data = {
             'content_type': data['contentType'],
             'version': '',
-            'resource_type': '',
+            'resource_type': data.get('resourceType', ''),
             'state': '',
-            'is_public': data.get('isPublic', False)
+            'is_public': data.get('isPublic', False),
+            'content_path': ''
         }
 
         current_organization = provider.userprofile.current_organization
 
-        site = Context.objects.all()[0].site.domain
-        if not file_:
-            if 'content' not in data:
-                raise ValueError('The digital asset file has not been provided')
-
-            resource_data['content_path'] = self._save_resource_file(current_organization.name, data['content'])
-        else:
-            resource_data['content_path'] = self._save_resource_file(current_organization.name, file_)
-
-        resource_data['link'] = urljoin(site, '/charging/' + resource_data['content_path'])
         resource_data['metadata'] = data.get('metadata', {})
+
+        # Check if the asset is a file upload or a service registration
+        provided_as = 'FILE'
+        if 'content' in data:
+            if isinstance(data['content'], str) or isinstance(data['content'], unicode):
+                # Check that the download link is not already being used
+                existing_assets = Resource.objects.filter(download_link=data['content'], provider=current_organization)
+                is_conflict = False
+                for asset in existing_assets:
+                    if asset.product_id is not None:
+                        is_conflict = True
+                    else:
+                        asset.delete()
+
+                if is_conflict:
+                    raise ConflictError('The provided digital asset already exists')
+
+                download_link = data['content']
+                provided_as = 'URL'
+
+            elif isinstance(data['content'], dict):
+                resource_data['content_path'], download_link = \
+                    self._save_resource_file(current_organization.name, data['content'])
+
+            else:
+                raise TypeError('content field has an unsupported type, expected string or object')
+
+        elif file_ is not None:
+            resource_data['content_path'], download_link = self._save_resource_file(current_organization.name, file_)
+
+        else:
+            raise ValueError('The digital asset has not been provided')
+
+        if not is_valid_url(download_link):
+            raise ValueError('The provided content is not a valid URL')
+
+        resource_data['link'] = download_link
+
+        # Validate asset according to its type
+        self._validate_asset_type(
+            resource_data['resource_type'], resource_data['content_type'], provided_as, resource_data['metadata'])
 
         return resource_data, current_organization
 

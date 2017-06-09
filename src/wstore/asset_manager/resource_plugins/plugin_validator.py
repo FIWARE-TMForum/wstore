@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 - 2016 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2015 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -26,13 +26,63 @@ from wstore.store_commons.utils.name import is_valid_id
 
 class PluginValidator():
 
+
     def _validate_plugin_form(self, form_info):
         """
         Validates the structure of the form definition of a plugin
         included in the package.json file
         """
+
         reason = None
-        valid_types = ['text', 'textarea', 'checkbox', 'select']
+       
+        def _text_type(key, value, attrs):
+            reasonStr = ''
+            for attr in attrs:
+                if attr in value and not (isinstance(value[attr], str) or isinstance(value[attr], unicode)):
+                    reasonStr += '\nInvalid form field: ' + attr + ' field in ' + key + ' entry must be an string'
+
+            return reasonStr
+
+        def _bool_type(key, value, attrs):
+            reasonStr = ''
+            for attr in attrs:
+                if attr in value and not isinstance(value[attr], bool):
+                    reasonStr += '\nInvalid form field: ' + attr + ' field in ' + key + ' entry must be a boolean'
+
+            return reasonStr
+
+        def _validate_text_type(key, value):
+            reasonStr = _text_type(key, value, ['default', 'placeholder', 'label'])
+            reasonStr += _bool_type(key, value, ['mandatory'])
+            return reasonStr if len(reasonStr) else None
+
+        def _validate_checkbox_type(key, value):
+            reasonStr = _text_type(key, value, ['label'])
+            reasonStr += _bool_type(key, value, ['default', 'mandatory'])
+
+            return reasonStr if len(reasonStr) else None
+
+        def _validate_select_type(key, value):
+            reasonStr = _text_type(key, value, ['default', 'label'])
+            reasonStr += _bool_type(key, value, ['mandatory'])
+
+            if 'options' not in value or not isinstance(value['options'], list) or not len(value['options']):
+                reasonStr += '\nInvalid form field: Missing or invalid options in ' + k + ' field'
+            else:
+                for option in value['options']:
+                    if not isinstance(option, dict) or not 'text' in option or not 'value' in option:
+                        reasonStr += '\nInvalid form field: Invalid option in ' + k + ' field, wrong option type or missing field'
+                    else:
+                        reasonStr += _text_type(key, option, ['text', 'value'])
+
+            return reasonStr if len(reasonStr) else None
+
+        valid_types = {
+            'text': _validate_text_type, 
+            'textarea': _validate_text_type,
+            'checkbox': _validate_checkbox_type,
+            'select': _validate_select_type
+        }
 
         for k, v in form_info.iteritems():
             # Validate component
@@ -55,8 +105,8 @@ class PluginValidator():
                 break
 
             # Validate specific fields
-            if v['type'] == 'checkbox' and 'default' in v and not isinstance(v['default'], bool):
-                reason = 'Invalid form field: default field in ' + k + ' entry must be a boolean'
+            reason = valid_types[v['type']](k, v)
+            if reason is not None:
                 break
 
         return reason
@@ -129,6 +179,9 @@ class PluginValidator():
 
         if reason is None and not is_valid_version(plugin_info['version']):
             reason = 'Invalid format in plugin version'
+
+        if reason is None and 'pull_accounting' in plugin_info and not isinstance(plugin_info['pull_accounting'], bool):
+            reason = 'Plugin pull_accounting property must be a boolean'
 
         if reason is None and 'form' in plugin_info:
             if not isinstance(plugin_info['form'], dict):

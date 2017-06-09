@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013 - 2016 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2013 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -74,6 +74,9 @@ class ResourcePlugin(models.Model):
     media_types = ListField(models.CharField(max_length=100))
     formats = ListField(models.CharField(max_length=10))
     overrides = ListField(models.CharField(max_length=10))
+
+    # Whether the plugin must ask for accounting info
+    pull_accounting = models.BooleanField(default=False)
     options = DictField()
 
     def __unicode__(self):

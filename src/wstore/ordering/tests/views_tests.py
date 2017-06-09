@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 - 2016 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2015 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -338,6 +338,8 @@ class RenovationCollectionTestCase(TestCase):
         self.charging_inst.resolve_charging.return_value = url
         views.ChargingEngine.return_value = self.charging_inst
 
+        views.on_usage_refreshed = MagicMock()
+
         collection = views.RenovationCollection(permitted_methods=('POST', ))
         response, body = api_call(self, collection, data, side_effect)
 
@@ -356,3 +358,6 @@ class RenovationCollectionTestCase(TestCase):
             views.ChargingEngine.assert_called_once_with(views.Order.objects.get())
             self.charging_inst.resolve_charging.assert_called_once_with(
                 type_=concept, related_contracts=[views.Order.objects.get().get_product_contract()])
+
+            views.on_usage_refreshed.assert_called_once_with(
+                views.Order.objects.get(), views.Order.objects.get().get_product_contract())

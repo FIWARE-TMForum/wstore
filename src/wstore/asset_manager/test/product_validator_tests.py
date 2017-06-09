@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 - 2016 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2015 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -19,7 +19,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
-from copy import deepcopy
 
 from mock import MagicMock, call
 from nose_parameterized import parameterized
@@ -30,6 +29,7 @@ from django.test.testcases import TestCase
 from wstore.asset_manager import product_validator, offering_validator
 from wstore.asset_manager.errors import ProductError
 from wstore.asset_manager.test.product_validator_test_data import *
+from wstore.store_commons.errors import ConflictError
 
 
 class ValidatorTestCase(TestCase):
@@ -44,8 +44,13 @@ class ValidatorTestCase(TestCase):
 
         module.Resource = MagicMock()
         self._asset_instance = MagicMock()
+        self._asset_instance.resource_type = 'Widget'
         self._asset_instance.content_type = 'application/x-widget'
         self._asset_instance.provider = self._provider
+        self._asset_instance.product_id = None
+        self._asset_instance.is_public = False
+
+        module.Resource.objects.filter.return_value = [self._asset_instance]
         module.Resource.objects.get.return_value = self._asset_instance
         module.Resource.objects.create.return_value = self._asset_instance
 
@@ -62,6 +67,7 @@ class ValidatorTestCase(TestCase):
         self._plugin_instance.media_types = ['application/x-widget']
         self._plugin_instance.formats = ["FILE"]
         self._plugin_instance.module = 'wstore.asset_manager.resource_plugins.plugin.Plugin'
+        self._plugin_instance.form = {}
 
         import wstore.asset_manager.resource_plugins.decorators
         wstore.asset_manager.resource_plugins.decorators.ResourcePlugin = MagicMock()
@@ -70,15 +76,9 @@ class ValidatorTestCase(TestCase):
     def tearDown(self):
         reload(offering_validator)
 
-    def _support_url(self):
+    def _not_existing(self):
         self._plugin_instance.formats = ["FILE", "URL"]
-
-    def _only_url(self):
-        self._plugin_instance.formats = ["URL"]
-
-    def _support_file(self):
-        self._plugin_instance.formats = ["FILE", "URL"]
-        self._context_inst.site.domain = "http://mydomain.org/"
+        product_validator.Resource.objects.filter.return_value = []
 
     def _not_supported(self):
         import wstore.asset_manager.resource_plugins.decorators
@@ -86,10 +86,9 @@ class ValidatorTestCase(TestCase):
         self._mock_validator_imports(product_validator)
 
     def _inv_media(self):
+        product_validator.Resource.objects.filter.return_value = []
         self._plugin_instance.media_types = ['text/plain']
-
-    def _not_asset(self):
-        product_validator.Resource.objects.get.side_effect = Exception('Not found')
+        self._plugin_instance.formats = ["URL"]
 
     def _not_owner(self):
         self._asset_instance.provider = MagicMock()
@@ -98,32 +97,65 @@ class ValidatorTestCase(TestCase):
         self._asset_instance.content_type = 'text/plain'
 
     def _existing_asset(self):
+        self._asset_instance.product_id = 27
+
+    def _invalid_type(self):
+        self._asset_instance.resource_type = 'Mashup'
+
+    def _metadata_plugin(self):
+        self._plugin_instance.form = {'data': 'data'}
         self._plugin_instance.formats = ["URL"]
-        product_validator.Resource.objects.filter.return_value = [self._asset_instance]
+        product_validator.Resource.objects.filter.return_value = []
+
+    def _pub_asset(self):
+        self._asset_instance.is_public = True
+
+    def test_validate_creation_registered_file(self):
+        self._mock_validator_imports(product_validator)
+
+        validator = product_validator.ProductValidator()
+        validator.validate('create', self._provider, BASIC_PRODUCT['product'])
+
+        product_validator.ResourcePlugin.objects.get.assert_called_once_with(name='Widget')
+        product_validator.Resource.objects.filter.assert_called_once_with(download_link=PRODUCT_LOCATION)
+        self.assertFalse(product_validator.Resource.objects.get().has_terms)
+        product_validator.Resource.objects.get().save.assert_called_once_with()
+
+    def test_validate_creation_new_url(self):
+        self._mock_validator_imports(product_validator)
+        product_validator.Resource.objects.filter.return_value = []
+        self._plugin_instance.formats = ["URL"]
+
+        validator = product_validator.ProductValidator()
+        validator.validate('create', self._provider, TERMS_PRODUCT['product'])
+
+        product_validator.Resource.objects.create.assert_called_once_with(
+            has_terms=True,
+            resource_path='',
+            download_link=PRODUCT_LOCATION,
+            provider=self._provider,
+            content_type='application/x-widget'
+        )
 
     @parameterized.expand([
-        ('basic', BASIC_PRODUCT, True, False),
-        ('file_url_allowed', TERMS_PRODUCT, True, True, _support_url),
-        ('url_asset', TERMS_PRODUCT, False, True, _only_url),
-        ('url_file_allowed', BASIC_PRODUCT, False, False, _support_file),
-        ('invalid_action', INVALID_ACTION, True, False, None, ValueError, 'The provided action (invalid) is not valid. Allowed values are create, attach, update, upgrade, and delete'),
-        ('missing_media', MISSING_MEDIA, True, False, None, ProductError, 'ProductError: Digital product specifications must contain a media type characteristic'),
-        ('missing_type', MISSING_TYPE, True, False, None, ProductError, 'ProductError: Digital product specifications must contain a asset type characteristic'),
-        ('missing_location', MISSING_LOCATION, True, False, None, ProductError, 'ProductError: Digital product specifications must contain a location characteristic'),
-        ('multiple_char', MULTIPLE_LOCATION, True, False, None, ProductError, 'ProductError: The product specification must not contain more than one location characteristic'),
-        ('multiple_values', MULTIPLE_VALUES, True, False, None, ProductError, 'ProductError: The characteristic Location must not contain multiple values'),
-        ('not_supported', BASIC_PRODUCT, True, False, _not_supported, ProductError, 'ProductError: The given product specification contains a not supported asset type: Widget'),
-        ('inv_media', BASIC_PRODUCT, True, False, _inv_media, ProductError, 'ProductError: The media type characteristic included in the product specification is not valid for the given asset type'),
-        ('inv_location', INVALID_LOCATION, True, False, None, ProductError, 'ProductError: The location characteristic included in the product specification is not a valid URL'),
-        ('not_asset', BASIC_PRODUCT, True, False, _not_asset, ProductError, 'ProductError: The URL specified in the location characteristic does not point to a valid digital asset'),
-        ('unauthorized', BASIC_PRODUCT, True, False, _not_owner, PermissionDenied, 'You are not authorized to use the digital asset specified in the location characteristic'),
-        ('diff_media', BASIC_PRODUCT, True, False, _diff_media, ProductError, 'ProductError: The specified media type characteristic is different from the one of the provided digital asset'),
-        ('existing_asset', BASIC_PRODUCT, False, False, _existing_asset, ProductError, 'ProductError: There is already an existing product specification defined for the given digital asset'),
-        ('inv_terms', INVALID_TERMS, False, False, None, ProductError, 'ProductError: The characteristic License must not contain multiple values'),
-        ('multiple_terms', MULTIPLE_TERMS, False, False, None, ProductError, 'ProductError: The product specification must not contain more than one license characteristic')
+        ('invalid_action', INVALID_ACTION, None, ValueError, 'The provided action (invalid) is not valid. Allowed values are create, attach, update, upgrade, and delete'),
+        ('missing_media', MISSING_MEDIA, None, ProductError, 'ProductError: Digital product specifications must contain a media type characteristic'),
+        ('missing_type', MISSING_TYPE, None, ProductError, 'ProductError: Digital product specifications must contain a asset type characteristic'),
+        ('missing_location', MISSING_LOCATION, None, ProductError, 'ProductError: Digital product specifications must contain a location characteristic'),
+        ('multiple_license', MULTIPLE_TERMS, None, ProductError, 'ProductError: The product specification must not contain more than one license characteristic'),
+        ('multiple_char', MULTIPLE_LOCATION, None, ProductError, 'ProductError: The product specification must not contain more than one location characteristic'),
+        ('multiple_values', MULTIPLE_VALUES, None, ProductError, 'ProductError: The characteristic Location must not contain multiple values'),
+        ('inv_location', INVALID_LOCATION, None, ProductError, 'ProductError: The location characteristic included in the product specification is not a valid URL'),
+        ('unauthorized', BASIC_PRODUCT, _not_owner, PermissionDenied, 'You are not authorized to use the digital asset specified in the location characteristic'),
+        ('existing_asset', BASIC_PRODUCT, _existing_asset, ConflictError, 'There is already an existing product specification defined for the given digital asset'),
+        ('invalid_asset_type', BASIC_PRODUCT, _invalid_type, ProductError, 'ProductError: The specified asset type if different from the asset one'),
+        ('diff_media', BASIC_PRODUCT, _diff_media, ProductError, 'ProductError: The provided media type characteristic is different from the asset one'),
+        ('not_asset', BASIC_PRODUCT, _not_existing, ProductError, 'ProductError: The URL specified in the location characteristic does not point to a valid digital asset'),
+        ('exp_metadata', TERMS_PRODUCT, _metadata_plugin, ProductError, 'ProductError: Automatic creation of digital assets with expected metadata is not supported'),
+        ('inv_media', BASIC_PRODUCT, _inv_media, ProductError, 'ProductError: The media type characteristic included in the product specification is not valid for the given asset type'),
+        ('public_asset', BASIC_PRODUCT, _pub_asset, ProductError, 'ProductError: It is not allowed to create products with public assets')
     ])
-    def test_validate_creation(self, name, data, is_file, has_terms, side_effect=None, err_type=None, err_msg=None):
-
+    def test_validate_creation_error(self, name, data, side_effect, err_type, err_msg):
         self._mock_validator_imports(product_validator)
 
         if side_effect is not None:
@@ -136,48 +168,8 @@ class ValidatorTestCase(TestCase):
         except Exception as e:
             error = e
 
-        if err_type is None:
-            self.assertTrue(error is None)
-            # Check calls
-            product_validator.ResourcePlugin.objects.get.assert_called_once_with(name='Widget')
-
-            if is_file:
-                product_validator.Resource.objects.get.assert_called_once_with(download_link=PRODUCT_LOCATION)
-                self.assertEquals(product_validator.Resource.objects.get().has_terms, has_terms)
-                product_validator.Resource.objects.get().save.assert_called_once_with()
-            else:
-                product_validator.Resource.objects.create.assert_called_once_with(
-                    has_terms=has_terms,
-                    resource_path='',
-                    download_link=PRODUCT_LOCATION,
-                    provider=self._provider,
-                    content_type='application/x-widget'
-                )
-
-        else:
-            self.assertTrue(isinstance(error, err_type))
-            self.assertEquals(err_msg, unicode(e))
-
-    def test_validate_detached(self):
-        self._mock_validator_imports(product_validator)
-        self._plugin_instance.formats = ["URL"]
-
-        res1 = MagicMock(product_id=None)
-        res2 = MagicMock(product_id=None)
-        product_validator.Resource.objects.filter.return_value = [res1, res2]
-
-        validator = product_validator.ProductValidator()
-        validator.validate('create', self._provider, BASIC_PRODUCT['product'])
-
-        res1.delete.assert_called_once_with()
-        res2.delete.assert_called_once_with()
-        product_validator.Resource.objects.create.assert_called_once_with(
-            has_terms=False,
-            resource_path='',
-            download_link=PRODUCT_LOCATION,
-            provider=self._provider,
-            content_type='application/x-widget'
-        )
+        self.assertTrue(isinstance(error, err_type))
+        self.assertEquals(err_msg, unicode(error))
 
     def _non_digital(self):
         return [[], []]
