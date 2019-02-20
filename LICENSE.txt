@@ -4,7 +4,7 @@ The business-charging-backend of the Business API Ecosystem
 is distributed under version 3 of the AGPL Licence.
 
 A literal transcription of the AGPL license follows:
-
+ 
                     GNU AFFERO GENERAL PUBLIC LICENSE
                        Version 3, 19 November 2007
 
