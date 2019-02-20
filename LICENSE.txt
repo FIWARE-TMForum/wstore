@@ -4,14 +4,14 @@ The business-charging-backend of the Business API Ecosystem
 is distributed under version 3 of the AGPL Licence.
 
 A literal transcription of the AGPL license follows:
- 
+
                     GNU AFFERO GENERAL PUBLIC LICENSE
                        Version 3, 19 November 2007
 
  Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
  Everyone is permitted to copy and distribute verbatim copies
  of this license document, but changing it is not allowed.
-zasdasd
+
                             Preamble
 
   The GNU Affero General Public License is a free, copyleft license for
