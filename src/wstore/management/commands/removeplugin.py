@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from django.core.management.base import BaseCommand, CommandError
 
@@ -44,6 +44,6 @@ class Command(BaseCommand):
             plugin_loader = PluginLoader()
             plugin_loader.uninstall_plugin(name)
         except Exception as e:
-            raise CommandError(unicode(e))
+            raise CommandError(str(e))
 
         self.stdout.write("The plugin has been removed\n")

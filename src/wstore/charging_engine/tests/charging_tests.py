@@ -18,8 +18,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
-from __future__ import absolute_import
+
+
 
 import json
 from bson.objectid import ObjectId
@@ -211,7 +211,7 @@ class ChargingEngineTestCase(TestCase):
             'description': 'Offering 2 description',
             'offering_pk': '222222',
             'item_id': '2',
-            'pricing': self._get_subscription(datetime(2015, 10, 01, 10, 10)),
+            'pricing': self._get_subscription(datetime(2015, 10, 0o1, 10, 10)),
             'product_id': 'product2'
         })
         contract3 = self._mock_contract({
@@ -237,7 +237,7 @@ class ChargingEngineTestCase(TestCase):
                     'unit': 'monthly',
                     'tax_rate': '20.00',
                     'duty_free': '10.00',
-                    'renovation_date': datetime(2015, 10, 01, 10, 10)
+                    'renovation_date': datetime(2015, 10, 0o1, 10, 10)
                 }]
             },
             'item': '2'
@@ -704,7 +704,7 @@ class ChargingEngineTestCase(TestCase):
         return self._set_alterations('single_payment', 'one time'), []
 
     def _set_renovation_alteration_contracts(self):
-        return self._set_alterations('subscription', 'monthly', datetime(2015, 10, 01, 10, 10)), []
+        return self._set_alterations('subscription', 'monthly', datetime(2015, 10, 0o1, 10, 10)), []
 
     @parameterized.expand([
         ('initial', _set_initial_contracts),
@@ -722,7 +722,7 @@ class ChargingEngineTestCase(TestCase):
         charging = charging_engine.ChargingEngine(self._order)
         redirect_url = charging.resolve_charging(name)
 
-        self.assertEquals(self._paypal_url, redirect_url)
+        self.assertEqual(self._paypal_url, redirect_url)
 
         # Check payment client loading call
         charging_engine.importlib.import_module.assert_called_once_with('wstore.charging_engine.payment_client.payment_client')
@@ -734,12 +734,12 @@ class ChargingEngineTestCase(TestCase):
         self._thread.start.assert_called_once_with()
 
         # Check payment saving
-        self.assertEquals(Payment(
+        self.assertEqual(Payment(
             transactions=transactions,
             free_contracts=free_contracts,
             concept=name
         ), self._order.pending_payment)
-        self.assertEquals('pending', self._order.state)
+        self.assertEqual('pending', self._order.state)
         self._order.save.assert_called_once_with()
 
     def test_renovation_error(self):
@@ -755,7 +755,7 @@ class ChargingEngineTestCase(TestCase):
             error = e
 
         self.assertTrue(error is not None)
-        self.assertEquals('OrderingError: There is not recurring payments to renovate', unicode(error))
+        self.assertEqual('OrderingError: There is not recurring payments to renovate', str(error))
 
     def test_free_charge(self):
 
@@ -769,17 +769,17 @@ class ChargingEngineTestCase(TestCase):
 
         # Check invoice generation calls
         charging_engine.InvoiceBuilder.assert_called_once_with(self._order)
-        self.assertEquals(charging_engine.InvoiceBuilder().generate_invoice.call_count, 0)
-        self.assertEquals(charging_engine.BillingClient().create_charge.call_count, 0)
+        self.assertEqual(charging_engine.InvoiceBuilder().generate_invoice.call_count, 0)
+        self.assertEqual(charging_engine.BillingClient().create_charge.call_count, 0)
 
         # Check order status
-        self.assertEquals('paid', self._order.state)
-        self.assertEquals(None, self._order.pending_payment)
+        self.assertEqual('paid', self._order.state)
+        self.assertEqual(None, self._order.pending_payment)
         self._order.save.assert_called_once_with()
 
     def _validate_subscription_calls(self):
 
-        self.assertEquals({
+        self.assertEqual({
             'general_currency': 'EUR',
             'subscription': [{
                 'value': '12.00',
@@ -791,31 +791,31 @@ class ChargingEngineTestCase(TestCase):
         }, self._order.contracts[1].pricing_model)
 
     def _validate_end_initial_payment(self, transactions):
-        self.assertEquals([
+        self.assertEqual([
             call('1'),
             call('2')
         ], self._order.get_item_contract.call_args_list)
 
-        self.assertEquals(['111111', '222222', '333333'], self._order.owner_organization.acquired_offerings)
-        self.assertEquals([
+        self.assertEqual(['111111', '222222', '333333'], self._order.owner_organization.acquired_offerings)
+        self.assertEqual([
             call(),
             call(),
             call()
         ], self._order.owner_organization.save.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call(self._order, self._order.contracts[0]),
             call(self._order, self._order.contracts[1]),
         ], charging_engine.CDRManager.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call(transactions[0]['related_model'], '2016-01-20T13:12:39Z'),
             call(transactions[1]['related_model'], '2016-01-20T13:12:39Z')
         ], charging_engine.CDRManager().generate_cdr.call_args_list)
 
         charging_engine.NotificationsHandler().send_acquired_notification.assert_called_once_with(self._order)
 
-        self.assertEquals([
+        self.assertEqual([
             call(self._order, self._order.contracts[0]),
             call(self._order, self._order.contracts[1]),
             call(self._order, self._order.contracts[2])
@@ -830,31 +830,31 @@ class ChargingEngineTestCase(TestCase):
             invoice=INVOICE_PATH
         )
 
-        self.assertEquals([
+        self.assertEqual([
             basic_charge_call, basic_charge_call
         ], charging_engine.Charge.call_args_list)
 
-        self.assertEquals([self._charge], self._order.contracts[0].charges)
-        self.assertEquals([self._charge], self._order.contracts[1].charges)
+        self.assertEqual([self._charge], self._order.contracts[0].charges)
+        self.assertEqual([self._charge], self._order.contracts[1].charges)
 
-        self.assertEquals(0, charging_engine.BillingClient.call_count)
+        self.assertEqual(0, charging_engine.BillingClient.call_count)
 
         self._validate_subscription_calls()
 
     def _validate_end_initial_alteration_payment(self, transactions):
-        self.assertEquals([
+        self.assertEqual([
             call('1'), call('2'), call('3'), call('4'), call('5')
         ], self._order.get_item_contract.call_args_list)
 
-        self.assertEquals(['111111', '222222', '333333', '444444', '555555'], self._order.owner_organization.acquired_offerings)
-        self.assertEquals([
+        self.assertEqual(['111111', '222222', '333333', '444444', '555555'], self._order.owner_organization.acquired_offerings)
+        self.assertEqual([
             call(), call(), call(), call(), call(), call()
         ], self._order.owner_organization.save.call_args_list)
 
-        self.assertEquals([call(self._order, contract) for contract in self._order.contracts],
+        self.assertEqual([call(self._order, contract) for contract in self._order.contracts],
                           charging_engine.CDRManager.call_args_list)
 
-        self.assertEquals([call(trans['related_model'], '2016-01-20T13:12:39Z') for trans in transactions],
+        self.assertEqual([call(trans['related_model'], '2016-01-20T13:12:39Z') for trans in transactions],
                           charging_engine.CDRManager().generate_cdr.call_args_list)
 
         def charge_call(c, d):
@@ -865,29 +865,29 @@ class ChargingEngineTestCase(TestCase):
                         duty_free=d,
                         invoice=INVOICE_PATH)
 
-        self.assertEquals([
+        self.assertEqual([
             charge_call('20.00', '20.00'), charge_call('15.00', '15.00'), charge_call('9.00', '9.00'), charge_call('10.00', '10.00'), charge_call('9.00', '9.00')
         ], charging_engine.Charge.call_args_list)
 
-        self.assertEquals([[self._charge] for x in range(len(self._order.contracts))], map(lambda x: x.charges, self._order.contracts))
+        self.assertEqual([[self._charge] for x in range(len(self._order.contracts))], [x.charges for x in self._order.contracts])
 
-        self.assertEquals(0, charging_engine.BillingClient.call_count)
+        self.assertEqual(0, charging_engine.BillingClient.call_count)
 
     def _validate_end_renovation_payment(self, transactions):
-        self.assertEquals([
+        self.assertEqual([
             call('2')
         ], self._order.get_item_contract.call_args_list)
 
         charging_engine.CDRManager.assert_called_once_with(self._order, self._order.contracts[1])
 
         # No new offering has been included
-        self.assertEquals([], self._order.owner_organization.acquired_offerings)
+        self.assertEqual([], self._order.owner_organization.acquired_offerings)
         charging_engine.CDRManager().generate_cdr.assert_called_once_with(transactions[0]['related_model'], '2016-01-20T13:12:39Z')
 
-        self.assertEquals(0, self._order.contracts[0].call_count)
-        self.assertEquals(0, self._order.contracts[2].call_count)
+        self.assertEqual(0, self._order.contracts[0].call_count)
+        self.assertEqual(0, self._order.contracts[2].call_count)
 
-        self.assertEquals([], self._order.contracts[0].charges)
+        self.assertEqual([], self._order.contracts[0].charges)
 
         charging_engine.NotificationsHandler().send_renovation_notification.assert_called_once_with(self._order, transactions)
 
@@ -900,9 +900,9 @@ class ChargingEngineTestCase(TestCase):
             invoice=INVOICE_PATH
         )
 
-        self.assertEquals([self._charge], self._order.contracts[1].charges)
+        self.assertEqual([self._charge], self._order.contracts[1].charges)
 
-        self.assertEquals([], self._order.contracts[2].charges)
+        self.assertEqual([], self._order.contracts[2].charges)
 
         charging_engine.BillingClient.assert_called_once_with()
         charging_engine.BillingClient().create_charge.assert_called_once_with(
@@ -911,15 +911,15 @@ class ChargingEngineTestCase(TestCase):
         self._validate_subscription_calls()
 
     def _validate_end_renovation_alteration_payment(self, transactions):
-        self.assertEquals([call(str(x + 1)) for x in range(5)], self._order.get_item_contract.call_args_list)
+        self.assertEqual([call(str(x + 1)) for x in range(5)], self._order.get_item_contract.call_args_list)
 
-        self.assertEquals([], self._order.owner_organization.acquired_offerings)
-        self.assertEquals([call()], self._order.owner_organization.save.call_args_list)
+        self.assertEqual([], self._order.owner_organization.acquired_offerings)
+        self.assertEqual([call()], self._order.owner_organization.save.call_args_list)
 
-        self.assertEquals([call(self._order, contract) for contract in self._order.contracts],
+        self.assertEqual([call(self._order, contract) for contract in self._order.contracts],
                           charging_engine.CDRManager.call_args_list)
 
-        self.assertEquals([call(trans['related_model'], '2016-01-20T13:12:39Z') for trans in transactions],
+        self.assertEqual([call(trans['related_model'], '2016-01-20T13:12:39Z') for trans in transactions],
                           charging_engine.CDRManager().generate_cdr.call_args_list)
 
         def charge_call(c, d):
@@ -930,13 +930,13 @@ class ChargingEngineTestCase(TestCase):
                         duty_free=d,
                         invoice=INVOICE_PATH)
 
-        self.assertEquals([
+        self.assertEqual([
             charge_call('20.00', '20.00'), charge_call('15.00', '15.00'), charge_call('9.00', '9.00'), charge_call('10.00', '10.00'), charge_call('10.00', '10.00')
         ], charging_engine.Charge.call_args_list)
 
-        self.assertEquals([[self._charge] for x in range(len(self._order.contracts))], map(lambda x: x.charges, self._order.contracts))
+        self.assertEqual([[self._charge] for x in range(len(self._order.contracts))], [x.charges for x in self._order.contracts])
 
-        self.assertEquals(1, charging_engine.BillingClient.call_count)
+        self.assertEqual(1, charging_engine.BillingClient.call_count)
 
         def validate_sub(c, d, n=1, alt=None):
             temp = {
@@ -951,17 +951,17 @@ class ChargingEngineTestCase(TestCase):
                 temp["alteration"] = alt
             return temp
 
-        self.assertEquals(
+        self.assertEqual(
             [validate_sub('10.00', '10.00', 2),
              validate_sub('10.00', '10.00', 1, {'value': {'duty_free': '5.00', 'value': '5.00'}, 'type': 'fee', 'period': 'recurring', 'condition': {'operation': 'gt', 'value': '5.00'}}),
              validate_sub('10.00', '10.00', 1, {'type': 'discount', 'period': 'recurring', 'value': '10.00'}),
              validate_sub('10.00', '10.00', 1, {'condition': {'operation': 'gt', 'value': '50.00'}, 'type': 'discount', 'period': 'recurring', 'value': '10.00'}),
-             validate_sub('10.00', '10.00', 1, {'type': 'discount', 'period': 'one time', 'value': {'value': '1.00', 'duty_free': '1.00'}})], map(lambda x: x.pricing_model, self._order.contracts))
+             validate_sub('10.00', '10.00', 1, {'type': 'discount', 'period': 'one time', 'value': {'value': '1.00', 'duty_free': '1.00'}})], [x.pricing_model for x in self._order.contracts])
 
     def _validate_end_usage_payment(self, transactions):
-        self.assertEquals([
-            call('1', unicode(datetime(2016, 1, 20, 13, 12, 39)), '83.30', '100.00', '20.00', 'EUR', self._order.contracts[0].product_id),
-            call('3', unicode(datetime(2016, 1, 20, 13, 12, 39)), '83.30', '100.00', '20.00', 'EUR', self._order.contracts[0].product_id)
+        self.assertEqual([
+            call('1', str(datetime(2016, 1, 20, 13, 12, 39)), '83.30', '100.00', '20.00', 'EUR', self._order.contracts[0].product_id),
+            call('3', str(datetime(2016, 1, 20, 13, 12, 39)), '83.30', '100.00', '20.00', 'EUR', self._order.contracts[0].product_id)
         ],
             charging_engine.UsageClient().rate_usage.call_args_list
         )
@@ -988,9 +988,9 @@ class ChargingEngineTestCase(TestCase):
         validator(self, transactions)
 
         # Validate calls
-        self.assertEquals('paid', self._order.state)
+        self.assertEqual('paid', self._order.state)
 
-        self.assertEquals([
+        self.assertEqual([
             call(),
             call()
         ], self._order.save.call_args_list)
@@ -1006,7 +1006,7 @@ class ChargingEngineTestCase(TestCase):
             error = e
 
         self.assertFalse(error is None)
-        self.assertEquals('Invalid charge type, must be initial, recurring, or usage', unicode(e))
+        self.assertEqual('Invalid charge type, must be initial, recurring, or usage', str(e))
 
 BASIC_PAYPAL = {
     'reference': '111111111111111111111111',
@@ -1188,14 +1188,14 @@ class PayPalConfirmationTestCase(TestCase):
 
         # Check response
         resp = json.loads(response.content)
-        self.assertEquals(expected_resp, resp)
+        self.assertEqual(expected_resp, resp)
 
         # Check calls
         views.OrderingClient.assert_called_once_with()
 
         if not error:
             views.get_database_connection.assert_called_once_with()
-            self.assertEquals([
+            self.assertEqual([
                 call({'_id': ObjectId('111111111111111111111111')}, {'$set': {'_lock': True}}),
                 call({'_id': ObjectId('111111111111111111111111')}, {'$set': {'_lock': False}})],
                 self._connection_inst.wstore_order.find_one_and_update.call_args_list
@@ -1212,17 +1212,17 @@ class PayPalConfirmationTestCase(TestCase):
 
             self._ordering_inst.get_order.assert_called_once_with('1')
 
-            self.assertEquals([call('1'), call('2')], self._order_inst.get_item_contract.call_args_list)
-            self.assertEquals([
+            self.assertEqual([call('1'), call('2')], self._order_inst.get_item_contract.call_args_list)
+            self.assertEqual([
                 call(self._raw_order, 'InProgress'),
             ], self._ordering_inst.update_state.call_args_list)
 
-            self.assertEquals([
+            self.assertEqual([
                 call(self._raw_order, 'Completed', completed)
             ], self._ordering_inst.update_items_state.call_args_list)
 
         elif to_del:
-            self.assertEquals([
+            self.assertEqual([
                 call(self._raw_order, 'Failed')
             ], self._ordering_inst.update_items_state.call_args_list)
             self._order_inst.delete.assert_called_once_with()
@@ -1336,16 +1336,16 @@ class PayPalRefundTestCase(TestCase):
         resp = json.loads(response.content)
 
         if not refund_fail:
-            self.assertEquals(resp, {'message': 'Ok', 'result': 'correct'})
+            self.assertEqual(resp, {'message': 'Ok', 'result': 'correct'})
 
             calls = [call(sale_id) for sale_id in sales_ids]
-            self.assertEquals(calls, self._payment_inst.refund.call_args_list)
+            self.assertEqual(calls, self._payment_inst.refund.call_args_list)
 
             cdr_manager_calls = [call(self._order_inst, contract) for contract in contracts if len(contract.charges) > 0]
-            self.assertEquals(cdr_manager_calls, views.CDRManager.call_args_list)
+            self.assertEqual(cdr_manager_calls, views.CDRManager.call_args_list)
 
             cdr_refund_calls = [call(contract.charges[0]['cost'], contract.charges[0]['duty_free'], '2016-10-20T00:00:00Z') for contract in contracts if len(contract.charges) > 0]
-            self.assertEquals(cdr_refund_calls, views.CDRManager().refund_cdrs.call_args_list)
+            self.assertEqual(cdr_refund_calls, views.CDRManager().refund_cdrs.call_args_list)
 
         else:
-            self.assertEquals(resp, {'error': 'Sales cannot be refunded', 'result': 'error'})
+            self.assertEqual(resp, {'error': 'Sales cannot be refunded', 'result': 'error'})

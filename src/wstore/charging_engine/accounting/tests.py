@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import json
 
@@ -201,14 +201,14 @@ class SDRManagerTestCase(TestCase):
             sdr_manager.Order.objects.get.assert_called_once_with(order_id='1')
             self._order.get_product_contract.assert_called_once_with('2')
 
-            self.assertEquals(self._contract, sdr_mng._contract)
-            self.assertEquals(self._order, sdr_mng._order)
-            self.assertEquals(self._timestamp, sdr_mng._time_stamp)
+            self.assertEqual(self._contract, sdr_mng._contract)
+            self.assertEqual(self._order, sdr_mng._order)
+            self.assertEqual(self._timestamp, sdr_mng._time_stamp)
 
             sdr_manager.User.objects.get.assert_called_once_with(username='test_user')
         else:
             self.assertTrue(isinstance(error, err_type))
-            self.assertEquals(unicode(e), err_msg)
+            self.assertEqual(str(e), err_msg)
 
     def test_update_usage(self):
         sdr_mng = sdr_manager.SDRManager()
@@ -218,8 +218,8 @@ class SDRManagerTestCase(TestCase):
 
         sdr_mng.update_usage()
 
-        self.assertEquals(2, self._contract.correlation_number)
-        self.assertEquals(
+        self.assertEqual(2, self._contract.correlation_number)
+        self.assertEqual(
             self._timestamp, self._contract.last_usage)
 
         self._order.save.assert_called_once_with()
@@ -277,12 +277,12 @@ class UsageClientTestCase(TestCase):
         cust_usage = client.get_customer_usage(self._customer, self._product_id, state=state)
 
         # Verify response
-        self.assertEquals(exp_resp, cust_usage)
+        self.assertEqual(exp_resp, cust_usage)
 
         # Verify calls
         usage_client.requests.get.assert_called_once_with(
             usage_client.settings.USAGE + '/api/usageManagement/v2/usage?relatedParty.id=' + self._customer + extra_query,
-            headers={u'Accept': u'application/json'}
+            headers={'Accept': 'application/json'}
         )
 
         mock_response.raise_for_status.assert_called_once_with()
@@ -296,7 +296,7 @@ class UsageClientTestCase(TestCase):
             error = e
 
         self.assertTrue(error is not None)
-        self.assertEquals('UsageError: Invalid usage status invalid', unicode(e))
+        self.assertEqual('UsageError: Invalid usage status invalid', str(e))
 
     def test_retrieve_usage_invalid_state(self):
         client = usage_client.UsageClient()
@@ -415,10 +415,10 @@ class SDRCollectionTestCase(TestCase):
 
     def _validate_response(self, response, exp_code, exp_response):
         # Validate response
-        self.assertEquals(exp_code, response.status_code)
+        self.assertEqual(exp_code, response.status_code)
         body = json.loads(response.content)
 
-        self.assertEquals(exp_response, body)
+        self.assertEqual(exp_response, body)
 
     @parameterized.expand([
         ('correct', BASIC_SDR, 200, {
@@ -463,4 +463,4 @@ class SDRCollectionTestCase(TestCase):
                 self._manager_inst.update_usage.assert_called_once_with()
             else:
                 views.UsageClient().update_usage_state.assert_called_once_with('1', 'Rejected')
-                self.assertEquals(0, self._manager_inst.update_usage.call_count)
+                self.assertEqual(0, self._manager_inst.update_usage.call_count)

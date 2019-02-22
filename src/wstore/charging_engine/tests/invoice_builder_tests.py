@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from mock import MagicMock
 from nose_parameterized import parameterized
@@ -61,7 +61,7 @@ SUBS_MODEL = [{
     'tax_rate': '20',
     'duty_free': '10.00',
     'unit': 'monthly',
-    'renovation_date': unicode(TIMESTAMP)
+    'renovation_date': str(TIMESTAMP)
 }]
 
 SINGLE_PAYMENT_TRANS = {
@@ -227,7 +227,7 @@ SINGLE_PAYMENT_ALT_CONTEXT.update(BASIC_ALTERATIONS)
 SUBSCRIPTION_CONTEXT = {
     'exists_single': False,
     'exists_subs': True,
-    'subs_parts': [('10.00', '20', '12.00', 'monthly', unicode(TIMESTAMP))]
+    'subs_parts': [('10.00', '20', '12.00', 'monthly', str(TIMESTAMP))]
 }
 SUBSCRIPTION_CONTEXT.update(COMMON_CONTEXT)
 SUBSCRIPTION_CONTEXT.update(BASIC_PRICES)
@@ -250,7 +250,7 @@ SUBSCRIPTION_ALTERATIONS = {
 SUBSCRIPTION_ALT_CONTEXT = {
     # 'exists_single': False,
     # 'exists_subs': True,
-    'subs_parts': [('10.00', '20', '12.00', 'monthly', unicode(TIMESTAMP))]
+    'subs_parts': [('10.00', '20', '12.00', 'monthly', str(TIMESTAMP))]
 }
 
 SUBSCRIPTION_ALT_CONTEXT.update(COMMON_CONTEXT)
@@ -260,7 +260,7 @@ SUBSCRIPTION_ALT_CONTEXT.update(SUBSCRIPTION_ALTERATIONS)
 MERGED_CONTEXT = {
     'exists_single': True,
     'exists_subs': True,
-    'subs_parts': [('10.00', '20', '12.00', 'monthly', unicode(TIMESTAMP))],
+    'subs_parts': [('10.00', '20', '12.00', 'monthly', str(TIMESTAMP))],
     'single_parts': [('10.00', '20', '12.00')]
 }
 MERGED_CONTEXT.update(COMMON_CONTEXT)
@@ -268,7 +268,7 @@ MERGED_CONTEXT.update(BASIC_PRICES)
 MERGED_CONTEXT.update(NON_ALTERATIONS)
 
 RENEW_CONTEXT = {
-    'subs_parts': [('10.00', '20', '12.00', 'monthly', unicode(TIMESTAMP))]
+    'subs_parts': [('10.00', '20', '12.00', 'monthly', str(TIMESTAMP))]
 }
 RENEW_CONTEXT.update(COMMON_CONTEXT)
 RENEW_CONTEXT.update(BASIC_PRICES)
@@ -355,7 +355,7 @@ class InvoiceBuilderTestCase(TestCase):
         exp_path = MEDIA_URL + 'bills/' + invoice_name
         html_path = BILL_ROOT + '/' + invoice_name.replace('_2.pdf', '.html')
 
-        self.assertEquals(exp_path, invoice_path)
+        self.assertEqual(exp_path, invoice_path)
 
         # Validate calls
         invoice_builder.loader.get_template.assert_called_once_with(templates[concept])

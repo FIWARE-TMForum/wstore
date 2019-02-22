@@ -19,7 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import unicode_literals
+
 
 from bson import ObjectId
 from mock import MagicMock, call, ANY
@@ -72,11 +72,11 @@ class PluginManagementTestCase(TestCase):
             error = e
 
         if err_msg is None:
-            self.assertEquals(error, None)
+            self.assertEqual(error, None)
             checker(self)
         else:
             self.assertTrue(isinstance(error, FakeCommandError))
-            self.assertEquals(unicode(e), err_msg)
+            self.assertEqual(str(e), err_msg)
 
     @parameterized.expand([
         ('correct', ['test_plugin.zip'], _check_loaded),
@@ -129,7 +129,7 @@ class ResendUpgradeTestCase(TestCase):
 
         self._check_context_calls()
 
-        self.assertEquals(0, resend_upgrade.InventoryUpgrader.call_count)
+        self.assertEqual(0, resend_upgrade.InventoryUpgrader.call_count)
 
         resend_upgrade.DocumentLock.assert_called_once_with('wstore_context', self._ctx_pk, 'ctx')
         self._lock_inst.wait_document.assert_called_once_with()
@@ -164,18 +164,18 @@ class ResendUpgradeTestCase(TestCase):
         call_command('resend_upgrade')
 
         self._check_context_calls()
-        self.assertEquals([{
+        self.assertEqual([{
             'asset_id': '2',
             'pending_offerings': [],
             'pending_products': ['2']
         }], self._ctx_inst.failed_upgrades)
 
-        self.assertEquals([
+        self.assertEqual([
             call(pk='1'),
             call(pk='2')
         ], resend_upgrade.Resource.objects.get.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call(asset1),
             call(asset2)
         ], resend_upgrade.InventoryUpgrader.call_args_list)
@@ -184,7 +184,7 @@ class ResendUpgradeTestCase(TestCase):
         self._upg_inst.upgrade_products.assert_called_once_with(['1', '2', '3'], ANY)
 
         # Validate that the lambda method passed to the upgrader is working properly
-        self.assertEquals('1', self._passed_method('1'))
+        self.assertEqual('1', self._passed_method('1'))
 
         resend_upgrade.DocumentLock.assert_called_once_with('wstore_context', self._ctx_pk, 'ctx')
         self._lock_inst.wait_document.assert_called_once_with()
@@ -196,6 +196,6 @@ class ResendUpgradeTestCase(TestCase):
         try:
             call_command('resend_upgrade')
         except CommandError as e:
-            msg = unicode(e)
+            msg = str(e)
 
-        self.assertEquals('Context object is not yet created', msg)
+        self.assertEqual('Context object is not yet created', msg)

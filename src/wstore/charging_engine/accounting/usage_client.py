@@ -19,10 +19,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import unicode_literals
+
 
 import requests
-from urlparse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse
 
 from django.conf import settings
 
@@ -122,7 +122,7 @@ class UsageClient(object):
         return [usage_doc for usage_doc in raw_usage if self._belongs_to_product(usage_doc, product_id)]
 
     def _patch_usage(self, usage_id, patch):
-        path = 'api/usageManagement/v2/usage/' + unicode(usage_id)
+        path = 'api/usageManagement/v2/usage/' + str(usage_id)
         url = urljoin(self._usage_api, path)
 
         r = requests.patch(url, json=patch)
@@ -158,7 +158,7 @@ class UsageClient(object):
         ext_host = settings.SITE
         inventory_url = urljoin(ext_host, inventory_path + '/')
 
-        product_url = urljoin(inventory_url, 'api/productInventory/v2/product/' + unicode(product_id))
+        product_url = urljoin(inventory_url, 'api/productInventory/v2/product/' + str(product_id))
         patch = {
             'status': 'Rated',
             'ratedProductUsage': [{

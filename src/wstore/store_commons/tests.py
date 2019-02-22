@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from bson import ObjectId
 from mock import MagicMock, call
@@ -105,7 +105,7 @@ class AuthenticationMiddlewareTestCase(TestCase):
         user = middleware.get_api_user(self.request)
 
         if not anonymous:
-            self.assertEquals(self._user_inst, user)
+            self.assertEqual(self._user_inst, user)
 
             # Check user info
             if not created:
@@ -113,24 +113,24 @@ class AuthenticationMiddlewareTestCase(TestCase):
             else:
                 self._user_model.objects.create.assert_called_once_with(username='test-user')
 
-            self.assertEquals(self._user_inst.is_staff, staff)
+            self.assertEqual(self._user_inst.is_staff, staff)
 
             self._org_model.objects.get.assert_called_once_with(name='test-user')
 
-            self.assertEquals('user@email.com', self._user_inst.email)
-            self.assertEquals('1234567890abcdf', self._user_inst.userprofile.access_token)
-            self.assertEquals('Test user', self._user_inst.userprofile.complete_name)
-            self.assertEquals('test-user', self._user_inst.userprofile.actor_id)
+            self.assertEqual('user@email.com', self._user_inst.email)
+            self.assertEqual('1234567890abcdf', self._user_inst.userprofile.access_token)
+            self.assertEqual('Test user', self._user_inst.userprofile.complete_name)
+            self.assertEqual('test-user', self._user_inst.userprofile.actor_id)
 
-            self.assertEquals(expected_roles, self._user_inst.userprofile.current_roles)
-            self.assertEquals(self._org_instance, self._user_inst.userprofile.current_organization)
+            self.assertEqual(expected_roles, self._user_inst.userprofile.current_roles)
+            self.assertEqual(self._org_instance, self._user_inst.userprofile.current_organization)
 
             self._org_instance.save.assert_called_once_with()
             self._user_inst.userprofile.save.assert_called_once_with()
             self._user_inst.save.assert_called_once_with()
 
         else:
-            self.assertEquals(AnonymousUser(), user)
+            self.assertEqual(AnonymousUser(), user)
 
     def test_get_api_user_org(self):
         self.request.META = {
@@ -145,11 +145,11 @@ class AuthenticationMiddlewareTestCase(TestCase):
 
         user = middleware.get_api_user(self.request)
 
-        self.assertEquals(self._user_inst, user)
+        self.assertEqual(self._user_inst, user)
         self._org_model.objects.create.assert_called_once_with(name='000000000000023')
 
-        self.assertEquals(['customer'], self._user_inst.userprofile.current_roles)
-        self.assertEquals(self._org_instance, self._user_inst.userprofile.current_organization)
+        self.assertEqual(['customer'], self._user_inst.userprofile.current_roles)
+        self.assertEqual(self._org_instance, self._user_inst.userprofile.current_organization)
 
         self.assertFalse(self._org_instance.private)
         self._org_instance.save.assert_called_once_with()
@@ -173,8 +173,8 @@ class RollbackTestCase(TestCase):
         value = wrapper(ref, 'value')
 
         called_method.assert_called_once_with(ref, 'value')
-        self.assertEquals('Returned', value)
-        self.assertEquals({
+        self.assertEqual('Returned', value)
+        self.assertEqual({
             'files': [],
             'models': []
         }, ref.rollback_logger)
@@ -206,7 +206,7 @@ class RollbackTestCase(TestCase):
             wrapper(wrapper_ref)
         except ValueError as e:
             error = True
-            self.assertEquals('Value error', unicode(e))
+            self.assertEqual('Value error', str(e))
 
         self.assertTrue(error)
         rollback.os.remove.assert_called_once_with('/home/test/testfile.pdf')
@@ -222,11 +222,11 @@ class RollbackTestCase(TestCase):
         rollback.os.path.exists.return_value = True
 
     def _exists_not_called(self):
-        self.assertEquals(0, rollback.os.path.exists.call_count)
+        self.assertEqual(0, rollback.os.path.exists.call_count)
 
     def _exists_called(self):
         rollback.os.path.exists.assert_called_once_with('/base/dir/new/path')
-        self.assertEquals(0, rollback.os.remove.call_count)
+        self.assertEqual(0, rollback.os.remove.call_count)
 
     def _remove_called(self):
         rollback.os.path.exists.assert_called_once_with('/base/dir/new/path')
@@ -262,11 +262,11 @@ class RollbackTestCase(TestCase):
 
         rollback.downgrade_asset_pa(downgrade_object)
 
-        self.assertEquals('old/path', asset.resource_path)
-        self.assertEquals('http://host/old/path', asset.download_link)
-        self.assertEquals('old_type', asset.content_type)
-        self.assertEquals('1.0', asset.version)
-        self.assertEquals([], asset.old_versions)
+        self.assertEqual('old/path', asset.resource_path)
+        self.assertEqual('http://host/old/path', asset.download_link)
+        self.assertEqual('old_type', asset.content_type)
+        self.assertEqual('1.0', asset.version)
+        self.assertEqual([], asset.old_versions)
 
         asset.save.assert_called_once_with()
         check(self)
@@ -303,7 +303,7 @@ class DocumentLockTestCase(TestCase):
         lock.wait_document()
 
         # Check database calls
-        self.assertEquals([
+        self.assertEqual([
             call({'_id': ObjectId(self._id)}, {'$set': {self._lock_id: True}}),
             call({'_id': ObjectId(self._id)}, {'$set': {self._lock_id: True}})
         ], self._connection[self._collection].find_one_and_update.call_args_list)

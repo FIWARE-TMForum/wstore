@@ -21,7 +21,7 @@
 import json
 
 from mock import MagicMock
-from StringIO import StringIO
+from io import StringIO
 from nose_parameterized import parameterized
 
 from django.test import TestCase
@@ -151,7 +151,7 @@ class AssetCollectionTestCase(TestCase):
         # Call the view
         response = resource_collection.read(request)
 
-        self.assertEquals(response.status_code, code)
+        self.assertEqual(response.status_code, code)
         self.assertEqual(response.get('Content-type'), 'application/json; charset=utf-8')
         body_response = json.loads(response.content)
 
@@ -162,8 +162,8 @@ class AssetCollectionTestCase(TestCase):
                 views.UserProfile.objects.get.assert_called_with(user=views.User.objects.get())
             user_called = self.user.userprofile if user is None else views.UserProfile.objects.get()
             self.am_instance.get_provider_assets_info.assert_called_once_with(user_called, pagination=pagination)
-            self.assertEquals(type(body_response), list)
-            self.assertEquals(body_response, return_value)
+            self.assertEqual(type(body_response), list)
+            self.assertEqual(body_response, return_value)
         else:
             self.assertEqual(type(body_response), dict)
             self.assertEqual(body_response['error'], error_msg)
@@ -206,16 +206,16 @@ class AssetCollectionTestCase(TestCase):
         request.user = self.user
 
         response = resource_entry.read(request, '1111')
-        self.assertEquals(response.status_code, exp_code)
+        self.assertEqual(response.status_code, exp_code)
         self.assertEqual(response.get('Content-type'), 'application/json; charset=utf-8')
 
         body_response = json.loads(response.content)
-        self.assertEquals(body_response, exp_value)
+        self.assertEqual(body_response, exp_value)
 
         if called:
             self.am_instance.get_asset_info.assert_called_once_with('1111')
         else:
-            self.assertEquals(self.am_instance.get_asset_info.call_count, 0)
+            self.assertEqual(self.am_instance.get_asset_info.call_count, 0)
 
     def _call_exception_product(self):
         self.am_instance.get_product_assets.side_effect = Exception("Getting resources error")
@@ -244,16 +244,16 @@ class AssetCollectionTestCase(TestCase):
         request = self.factory.get('/charging/api/assetsManagement/assets/product/111', HTTP_ACCEPT='application/json')
 
         response = resource_entry.read(request, '111')
-        self.assertEquals(response.status_code, exp_code)
-        self.assertEquals(response.get('Content-type'), 'application/json; charset=utf-8')
+        self.assertEqual(response.status_code, exp_code)
+        self.assertEqual(response.get('Content-type'), 'application/json; charset=utf-8')
 
         body_response = json.loads(response.content)
-        self.assertEquals(body_response, exp_value)
+        self.assertEqual(body_response, exp_value)
 
         if called:
             self.am_instance.get_product_assets.assert_called_once_with('111')
         else:
-            self.assertEquals(self.am_instance.get_product_assets.call_count, 0)
+            self.assertEqual(self.am_instance.get_product_assets.call_count, 0)
 
     def _no_provider_method(self, method):
         def side(ref):
@@ -347,7 +347,7 @@ class AssetCollectionTestCase(TestCase):
                     expected_file = request.FILES['file']
                     mock_method.assert_called_once_with(*argv, file_=expected_file)
 
-                self.assertEquals(body_response, {
+                self.assertEqual(body_response, {
                     'contentType': 'application/zip',
                     'content': 'http://locationurl.com/',
                     'id': '123456',
@@ -465,7 +465,7 @@ class AssetCollectionTestCase(TestCase):
 
         def validator(request, body_response):
             views.OfferingValidator.assert_called_once_with()
-            self.assertEquals(body_response, {
+            self.assertEqual(body_response, {
                 'result': 'correct',
                 'message': 'OK'
             })

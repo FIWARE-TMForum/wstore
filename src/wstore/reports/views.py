@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import json
 
@@ -48,7 +48,7 @@ class ReportReceiver(Resource):
             return build_response(request, 400, 'The provided data is not a valid JSON object')
 
         if order.get('status') != 'COMPLETED':
-            print("Order status: {}".format(order.get('status')))
+            print(("Order status: {}".format(order.get('status'))))
             return build_response(request, 200)
         payouteng = PayoutEngine()
         payouteng.process_unpaid()

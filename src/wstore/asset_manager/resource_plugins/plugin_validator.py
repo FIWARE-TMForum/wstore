@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>..
 
-from __future__ import unicode_literals
+
 
 from wstore.store_commons.utils.version import is_valid_version
 from wstore.store_commons.utils.name import is_valid_id
@@ -38,7 +38,7 @@ class PluginValidator():
         def _text_type(key, value, attrs):
             reasonStr = ''
             for attr in attrs:
-                if attr in value and not (isinstance(value[attr], str) or isinstance(value[attr], unicode)):
+                if attr in value and not (isinstance(value[attr], str) or isinstance(value[attr], str)):
                     reasonStr += '\nInvalid form field: ' + attr + ' field in ' + key + ' entry must be an string'
 
             return reasonStr
@@ -84,7 +84,7 @@ class PluginValidator():
             'select': _validate_select_type
         }
 
-        for k, v in form_info.iteritems():
+        for k, v in list(form_info.items()):
             # Validate component
             if not isinstance(v, dict):
                 reason = 'Invalid form field: ' + k + ' entry is not an object'
@@ -136,7 +136,7 @@ class PluginValidator():
             reason = 'Missing required field: name'
 
         # Validate types
-        if reason is None and not isinstance(plugin_info['name'], str) and not isinstance(plugin_info['name'], unicode):
+        if reason is None and not isinstance(plugin_info['name'], str) and not isinstance(plugin_info['name'], str):
             reason = 'Plugin name must be an string'
 
         if reason is None and not is_valid_id(plugin_info['name']):
@@ -154,7 +154,7 @@ class PluginValidator():
         if reason is None and 'version' not in plugin_info:
             reason = 'Missing required field: version'
 
-        if reason is None and not isinstance(plugin_info['author'], str) and not isinstance(plugin_info['author'], unicode):
+        if reason is None and not isinstance(plugin_info['author'], str) and not isinstance(plugin_info['author'], str):
             reason = 'Plugin author must be an string'
 
         if reason is None and not isinstance(plugin_info['formats'], list):
@@ -174,7 +174,7 @@ class PluginValidator():
         if reason is None and 'media_types' in plugin_info and not isinstance(plugin_info['media_types'], list):
             reason = 'Plugin media_types must be a list'
 
-        if reason is None and not isinstance(plugin_info['module'], str) and not isinstance(plugin_info['module'], unicode):
+        if reason is None and not isinstance(plugin_info['module'], str) and not isinstance(plugin_info['module'], str):
             reason = 'Plugin module must be an string'
 
         if reason is None and not is_valid_version(plugin_info['version']):

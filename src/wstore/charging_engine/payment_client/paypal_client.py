@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from decimal import Decimal
 import os
@@ -79,7 +79,7 @@ class PayPalClient(PaymentClient):
             },
             'transactions': [{
                 'amount': {
-                    'total': unicode(t['price']),
+                    'total': str(t['price']),
                     'currency': t['currency']
                 },
                 'description': t['description']
@@ -112,7 +112,7 @@ class PayPalClient(PaymentClient):
                     msg += 'Order composed of the following items ' + items
 
                     self.start_redirection_payment([{
-                        'price': unicode(total),
+                        'price': str(total),
                         'currency': current_curr,
                         'description': msg
                     }])

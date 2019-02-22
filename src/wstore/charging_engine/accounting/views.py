@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import json
 
@@ -51,9 +51,9 @@ class ServiceRecordCollection(Resource):
         try:
             sdr_manager.validate_sdr(data)
         except PermissionDenied as e:
-            response = build_response(request, 403, unicode(e))
+            response = build_response(request, 403, str(e))
         except ValueError as e:
-            response = build_response(request, 422, unicode(e))
+            response = build_response(request, 422, str(e))
         except:
             response = build_response(request, 500, 'The SDR document could not be processed due to an unexpected error')
 

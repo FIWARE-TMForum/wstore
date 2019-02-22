@@ -18,13 +18,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from copy import deepcopy
 from nose_parameterized import parameterized
 from mock import MagicMock, call
 from datetime import datetime
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ImproperlyConfigured
@@ -100,7 +100,7 @@ class OrderingManagementTestCase(TestCase):
         ordering_management.Resource.objects.get.return_value = self._asset_instance
 
         ordering_management.datetime = MagicMock()
-        self._now = datetime(2016, 12, 03)
+        self._now = datetime(2016, 12, 0o3)
         ordering_management.datetime.utcnow.return_value = self._now
 
         # Mock offering
@@ -348,17 +348,17 @@ class OrderingManagementTestCase(TestCase):
             self.assertTrue(error is None)
 
             # Check returned value
-            self.assertEquals('http://redirectionurl.com/', redirect_url)
+            self.assertEqual('http://redirectionurl.com/', redirect_url)
 
             # Check common calls
             ordering_management.ChargingEngine.assert_called_once_with(self._order_inst)
 
             # Check offering and product downloads
-            self.assertEquals(4, ordering_management.requests.get.call_count)
+            self.assertEqual(4, ordering_management.requests.get.call_count)
 
             headers = {'Authorization': 'Bearer ' + self._customer.userprofile.access_token}
             exp_url = 'http://extpath.com:8080{}'
-            self.assertEquals([
+            self.assertEqual([
                 call(exp_url.format('/DSProductCatalog/api/catalogManagement/v2/productOffering/20:(2.0)'), verify=True),
                 call(exp_url.format(urlparse(BILLING_ACCOUNT_HREF).path), headers=headers, verify=True),
                 call(exp_url.format(urlparse(BILLING_ACCOUNT['customerAccount']['href']).path), headers=headers, verify=True),
@@ -387,7 +387,7 @@ class OrderingManagementTestCase(TestCase):
             # Check particular calls
             checker(self)
         else:
-            self.assertEquals(err_msg, unicode(error))
+            self.assertEqual(err_msg, str(error))
 
     BASIC_MODIFY = {
         'state': 'Acknowledged',
@@ -486,13 +486,13 @@ class OrderingManagementTestCase(TestCase):
             self._charging_inst.resolve_charging.assert_called_once_with(type_='initial', related_contracts=[mock_contract])
 
             if new_pricing != {}:
-                self.assertEquals(new_pricing, mock_contract.pricing_model)
-                self.assertEquals('new_revenue', mock_contract.revenue_class)
+                self.assertEqual(new_pricing, mock_contract.pricing_model)
+                self.assertEqual('new_revenue', mock_contract.revenue_class)
             else:
-                self.assertEquals(pricing, mock_contract.pricing_model)
-                self.assertEquals('old_revenue', mock_contract.revenue_class)
+                self.assertEqual(pricing, mock_contract.pricing_model)
+                self.assertEqual('old_revenue', mock_contract.revenue_class)
         else:
-            self.assertEquals(err_msg, unicode(error))
+            self.assertEqual(err_msg, str(error))
 
 
 @override_settings(
@@ -541,7 +541,7 @@ class OrderingClientTestCase(TestCase):
         msg += 'please check that the ordering API is correctly configured '
         msg += 'and that the ordering API is up and running'
 
-        self.assertEquals(msg, unicode(e))
+        self.assertEqual(msg, str(e))
 
     @parameterized.expand([
         ('complete', {
@@ -604,7 +604,7 @@ class OrderingClientTestCase(TestCase):
 
         response = client.get_order('1')
 
-        self.assertEquals({
+        self.assertEqual({
             'id': '1'
         }, response)
 
@@ -665,7 +665,7 @@ class OrderTestCase(TestCase):
 
     def test_get_item_contract(self):
         contract = self._order.get_item_contract('2')
-        self.assertEquals(self._contract2, contract)
+        self.assertEqual(self._contract2, contract)
 
     def test_get_item_contract_invalid(self):
         error = None
@@ -675,11 +675,11 @@ class OrderTestCase(TestCase):
             error = e
 
         self.assertFalse(error is None)
-        self.assertEquals('OrderingError: Invalid item id', unicode(e))
+        self.assertEqual('OrderingError: Invalid item id', str(e))
 
     def test_get_product(self):
         contract = self._order.get_product_contract('4')
-        self.assertEquals(self._contract2, contract)
+        self.assertEqual(self._contract2, contract)
 
     def test_get_product_invalid(self):
         error = None
@@ -689,7 +689,7 @@ class OrderTestCase(TestCase):
             error = e
 
         self.assertFalse(error is None)
-        self.assertEquals('OrderingError: Invalid product id', unicode(e))
+        self.assertEqual('OrderingError: Invalid product id', str(e))
 
 
 @override_settings(
@@ -742,7 +742,7 @@ class InventoryClientTestCase(TestCase):
                 }
             )
         else:
-            self.assertEquals(0, inventory_client.requests.post.call_count)
+            self.assertEqual(0, inventory_client.requests.post.call_count)
 
     def test_create_subscription_error(self):
         self.response.json.return_value = []
@@ -759,7 +759,7 @@ class InventoryClientTestCase(TestCase):
         msg = "It hasn't been possible to create inventory subscription, "
         msg += 'please check that the inventory API is correctly configured '
         msg += 'and that the inventory API is up and running'
-        self.assertEquals(msg, unicode(error))
+        self.assertEqual(msg, str(error))
 
     def test_activate_product(self):
         client = inventory_client.InventoryClient()
@@ -784,7 +784,7 @@ class InventoryClientTestCase(TestCase):
         client = inventory_client.InventoryClient()
         client.terminate_product('1')
 
-        self.assertEquals([
+        self.assertEqual([
             call('http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1', json={
                 'status': 'Active',
                 'startDate': '2016-01-22T04:10:25.176751Z'
@@ -795,7 +795,7 @@ class InventoryClientTestCase(TestCase):
             })
         ], inventory_client.requests.patch.call_args_list)
 
-        self.assertEquals([call(), call()], inventory_client.requests.patch().raise_for_status.call_args_list)
+        self.assertEqual([call(), call()], inventory_client.requests.patch().raise_for_status.call_args_list)
 
     def test_get_product(self):
         client = inventory_client.InventoryClient()
@@ -815,4 +815,4 @@ class InventoryClientTestCase(TestCase):
         inventory_client.requests.get.assert_called_once_with('http://localhost:8080/DSProductInventory/api/productInventory/v2/product' + qs)
         inventory_client.requests.get().raise_for_status.assert_called_once_with()
 
-        self.assertEquals(inventory_client.requests.get().json(), products)
+        self.assertEqual(inventory_client.requests.get().json(), products)

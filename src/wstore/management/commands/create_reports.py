@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import requests
 
@@ -49,6 +49,6 @@ class Command(BaseCommand):
         response = requests.post(url, json=data, headers=headers)
 
         if response.status_code != 202:
-            print("Some error asking to generate reports:\n{}: {}".format(response.reason, response.text))
+            print(("Some error asking to generate reports:\n{}: {}".format(response.reason, response.text)))
         else:
             print("Sended.")

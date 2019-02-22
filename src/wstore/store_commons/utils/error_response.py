@@ -58,4 +58,4 @@ def get_unicode_response(request, mimetype, status_code, message):
     else:
         response += 'Correct: ' + message
 
-    return unicode(response)
+    return str(response)

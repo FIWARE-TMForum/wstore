@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -125,22 +125,22 @@ class NotificationsTestCase(TestCase):
             error = e
 
         self.assertTrue(error is not None)
-        self.assertEquals('Missing email configuration', unicode(error))
+        self.assertEqual('Missing email configuration', str(error))
 
     def _validate_user_call(self):
-        self.assertEquals([
+        self.assertEqual([
             call(pk='11111'),
             call(pk='22222')
         ], notification_handler.User.objects.get.call_args_list)
 
     def _validate_provider_call(self):
-        self.assertEquals([
+        self.assertEqual([
             call(pk='33333'),
             call(pk='44444')
         ], notification_handler.User.objects.get.call_args_list)
 
     def _validate_mime_text_info(self, subject):
-        self.assertEquals([
+        self.assertEqual([
             call('Subject', subject),
             call('From', 'wstore@email.com'),
             call('To', 'user1@email.com,user2@email.com')
@@ -171,7 +171,7 @@ class NotificationsTestCase(TestCase):
             filename='bill1.pdf'
         )
 
-        self.assertEquals([
+        self.assertEqual([
             call(notification_handler.MIMEText()),
             call(notification_handler.MIMEBase())
         ], notification_handler.MIMEMultipart().attach.call_args_list)
@@ -186,7 +186,7 @@ class NotificationsTestCase(TestCase):
 
         notification_handler.MIMEMultipart.assert_called_once_with()
 
-        self.assertEquals([
+        self.assertEqual([
             call('Subject', 'Product order accepted'),
             call('From', 'wstore@email.com'),
             call('To', 'user1@email.com,user2@email.com')

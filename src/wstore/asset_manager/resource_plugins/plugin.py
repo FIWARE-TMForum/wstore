@@ -19,7 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import unicode_literals
+
 
 from copy import deepcopy
 from requests.exceptions import HTTPError
@@ -117,7 +117,7 @@ class Plugin(object):
             try:
                 usage_client = UsageClient()
 
-                for unit, href in self._model.options['usage'].iteritems():
+                for unit, href in list(self._model.options['usage'].items()):
                     spec_id = href.split('/')[-1]
                     usage_client.delete_usage_spec(spec_id)
             except HTTPError as e:

@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from bson.objectid import ObjectId
 from decimal import Decimal
@@ -42,7 +42,7 @@ INITIAL_EXP = [{
     'tax_value': '2',
     'customer': 'customer',
     'event': 'One time payment event',
-    'time_stamp': u'2015-10-21 06:13:26.661650',
+    'time_stamp': '2015-10-21 06:13:26.661650',
     'type': 'C'
 }]
 
@@ -58,7 +58,7 @@ RECURRING_EXP = [{
     'tax_value': '2',
     'customer': 'customer',
     'event': 'Recurring payment event',
-    'time_stamp': u'2015-10-21 06:13:26.661650',
+    'time_stamp': '2015-10-21 06:13:26.661650',
     'type': 'C'
 }]
 
@@ -74,7 +74,7 @@ USAGE_EXP = [{
     'tax_value': '5.0',
     'customer': 'customer',
     'event': 'Pay per use event',
-    'time_stamp': u'2015-10-21 06:13:26.661650',
+    'time_stamp': '2015-10-21 06:13:26.661650',
     'type': 'C'
 }]
 
@@ -179,7 +179,7 @@ class CDRGenerationTestCase(TestCase):
             'tax_value': '2',
             'customer': 'customer',
             'event': 'Refund event',
-            'time_stamp': u'2015-10-21 06:13:26.661650',
+            'time_stamp': '2015-10-21 06:13:26.661650',
             'type': 'R'
         }]
 
@@ -196,9 +196,9 @@ class CDRGenerationTestCase(TestCase):
         cdr_manager.RSSAdaptorThread().start.assert_called_once_with()
 
 
-TIMESTAMP = datetime(2016, 06, 21, 10, 0, 0)
-RENEW_DATE = datetime(2016, 07, 21, 10, 0, 0)
-START_DATE = datetime(2016, 05, 21, 10, 0, 0)
+TIMESTAMP = datetime(2016, 0o6, 21, 10, 0, 0)
+RENEW_DATE = datetime(2016, 0o7, 21, 10, 0, 0)
+START_DATE = datetime(2016, 0o5, 21, 10, 0, 0)
 
 COMMON_CHARGE = {
     'date': TIMESTAMP.isoformat() + 'Z',
@@ -289,7 +289,7 @@ class BillingClientTestCase(TestCase):
         billing_client.Session.assert_called_once_with()
         session.prepare_request.assert_called_once_with(billing_client.Request())
 
-        self.assertEquals(
+        self.assertEqual(
             'extpath.com:8080',
             preped.headers['Host']
         )

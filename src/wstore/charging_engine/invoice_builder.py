@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import os
 import codecs
@@ -50,7 +50,7 @@ class InvoiceBuilder(object):
         if 'subscription' in applied_parts:
             for part in applied_parts['subscription']:
                 parts['subs_parts'].append(
-                    (part['duty_free'], part['tax_rate'], part['value'], part['unit'], unicode(part['renovation_date'])))
+                    (part['duty_free'], part['tax_rate'], part['value'], part['unit'], str(part['renovation_date'])))
 
     def _process_alteration_parts(self, applied_parts, parts):
         if 'alteration' in applied_parts:
@@ -94,7 +94,7 @@ class InvoiceBuilder(object):
             for sdr in part['accounting']:
                 use += Decimal(sdr['value'])
 
-            parts[part_name].append((unit, value_unit, unicode(use), part['price']))
+            parts[part_name].append((unit, value_unit, str(use), part['price']))
             parts[part_sub] += Decimal(part['price'])
 
     def _process_usage_parts(self, applied_parts, parts):
@@ -180,7 +180,7 @@ class InvoiceBuilder(object):
         context['use_parts'] = parts['use_parts']
         self._fill_alts_context(context, parts)
 
-        context['use_subtotal'] = unicode(parts['use_subtotal'])
+        context['use_subtotal'] = str(parts['use_subtotal'])
 
         if 'deduct_parts' in parts:
             context['deduction'] = True
@@ -190,7 +190,7 @@ class InvoiceBuilder(object):
             context['deduction'] = False
 
     def _avoid_existing_name(self, name, ix):
-        new_name = name + '_' + unicode(ix) + '.pdf'
+        new_name = name + '_' + str(ix) + '.pdf'
         path = os.path.join(settings.BILL_ROOT, new_name)
 
         if os.path.exists(path):
@@ -214,9 +214,9 @@ class InvoiceBuilder(object):
         if contract.last_charge is None:
             # If last charge is None means that it is the invoice generation
             # associated with a free offering
-            date = unicode(datetime.utcnow()).split(' ')[0]
+            date = str(datetime.utcnow()).split(' ')[0]
         else:
-            date = unicode(contract.last_charge).split(' ')[0]
+            date = str(contract.last_charge).split(' ')[0]
 
         # Calculate total taxes applied
         tax_value = Decimal(transaction['price']) - Decimal(transaction['duty_free'])
@@ -237,7 +237,7 @@ class InvoiceBuilder(object):
             'province': tax.get('province'),
             'country': tax.get('country'),
             'subtotal': transaction['duty_free'],
-            'tax': unicode(tax_value),
+            'tax': str(tax_value),
             'total': transaction['price'],
             'cur': transaction['currency']  # General currency of the invoice
         }

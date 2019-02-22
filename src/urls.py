@@ -21,8 +21,8 @@
 from django.conf.urls import patterns, url, include
 from django.contrib import admin
 
-import wstore.urls
-from wstore.views import ServeMedia
+from . import wstore.urls
+from .wstore.views import ServeMedia
 
 admin.autodiscover()
 

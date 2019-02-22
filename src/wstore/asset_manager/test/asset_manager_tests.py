@@ -18,9 +18,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
 
-import urllib
+
+import urllib.request, urllib.parse, urllib.error
 
 from copy import deepcopy
 from mock import MagicMock, mock_open
@@ -78,12 +78,12 @@ class ResourceRetrievingTestCase(TestCase):
     def validate_response(self, result, expected_result, error, err_type, err_msg):
         if err_type is None:
             # Assert that no error occurs
-            self.assertEquals(error, None)
+            self.assertEqual(error, None)
             # Check result
-            self.assertEquals(result, expected_result)
+            self.assertEqual(result, expected_result)
         else:
             self.assertTrue(isinstance(error, err_type))
-            self.assertEquals(unicode(error), err_msg)
+            self.assertEqual(str(error), err_msg)
 
     @parameterized.expand([
         ([RESOURCE_DATA1, RESOURCE_DATA2, RESOURCE_DATA3, RESOURCE_DATA4],),
@@ -247,13 +247,13 @@ class UploadAssetTestCase(TestCase):
             self.assertTrue(error is None)
 
             # Check calls
-            self.assertEquals(self.res_mock, resource)
-            self.assertEquals("http://locationurl.com/", resource.get_url())
+            self.assertEqual(self.res_mock, resource)
+            self.assertEqual("http://locationurl.com/", resource.get_url())
             self.assertEqual("http://uri.com/", resource.get_uri())
             self._check_file_calls(file_name)
 
             # Check rollback logger
-            self.assertEquals({
+            self.assertEqual({
                 'files': ["/home/test/media/assets/test_user/{}".format(file_name)],
                 'models': [self.res_mock]
             }, am.rollback_logger)
@@ -272,7 +272,7 @@ class UploadAssetTestCase(TestCase):
             asset_manager.Resource.objects.create.assert_called_once_with(
                 provider=self._user.userprofile.current_organization,
                 version='',
-                download_link='http://testdomain.com/charging/media/assets/test_user/{}'.format(urllib.quote(file_name)),
+                download_link='http://testdomain.com/charging/media/assets/test_user/{}'.format(urllib.parse.quote(file_name)),
                 resource_path='media/assets/test_user/{}'.format(file_name),
                 content_type='application/x-widget',
                 resource_type='',
@@ -282,7 +282,7 @@ class UploadAssetTestCase(TestCase):
             )
         else:
             self.assertTrue(isinstance(error, err_type))
-            self.assertEquals(err_msg, unicode(error))
+            self.assertEqual(err_msg, str(error))
 
     def _mock_resource_type(self, form):
         asset_manager.ResourcePlugin = MagicMock()
@@ -355,7 +355,7 @@ class UploadAssetTestCase(TestCase):
 
         am.upload_asset(self._user, content)
 
-        self.assertEquals({
+        self.assertEqual({
             'files': [],
             'models': [self.res_mock]
         }, am.rollback_logger)
@@ -485,7 +485,7 @@ class UploadAssetTestCase(TestCase):
             error = e
 
         self.assertTrue(isinstance(error, err_type))
-        self.assertEquals(err_msg, unicode(error))
+        self.assertEqual(err_msg, str(error))
 
     def _mock_timer(self):
         timer = MagicMock()
@@ -528,32 +528,32 @@ class UploadAssetTestCase(TestCase):
 
         # Check calls
         asset_manager.Resource.objects.filter.assert_called_once_with(pk=asset_id)
-        self.assertEquals(asset, resource)
+        self.assertEqual(asset, resource)
         self._check_file_calls()
 
         # Check rollback logger
-        self.assertEquals({
+        self.assertEqual({
             'files': ["/home/test/media/assets/test_user/example.wgt"],
             'models': []
         }, am.rollback_logger)
 
-        self.assertEquals(asset, am._to_downgrade)
+        self.assertEqual(asset, am._to_downgrade)
 
         # Check resource creation
-        self.assertEquals('media/assets/test_user/example.wgt', asset.resource_path)
-        self.assertEquals('http://testdomain.com/charging/media/assets/test_user/example.wgt', asset.download_link)
-        self.assertEquals('application/x-widget', asset.content_type)
-        self.assertEquals('upgrading', asset.state)
-        self.assertEquals('', asset.version)
+        self.assertEqual('media/assets/test_user/example.wgt', asset.resource_path)
+        self.assertEqual('http://testdomain.com/charging/media/assets/test_user/example.wgt', asset.download_link)
+        self.assertEqual('application/x-widget', asset.content_type)
+        self.assertEqual('upgrading', asset.state)
+        self.assertEqual('', asset.version)
 
-        self.assertEquals(1, len(asset.old_versions))
+        self.assertEqual(1, len(asset.old_versions))
 
         old_version = asset.old_versions[0]
 
-        self.assertEquals(prev_path, old_version.resource_path)
-        self.assertEquals(prev_link, old_version.download_link)
-        self.assertEquals(prev_type, old_version.content_type)
-        self.assertEquals(prev_version, old_version.version)
+        self.assertEqual(prev_path, old_version.resource_path)
+        self.assertEqual(prev_link, old_version.download_link)
+        self.assertEqual(prev_type, old_version.content_type)
+        self.assertEqual(prev_version, old_version.version)
 
         asset_manager.threading.Timer.assert_called_once_with(15, am._upgrade_timer)
         timer.start.assert_called_once_with()
@@ -600,7 +600,7 @@ class UploadAssetTestCase(TestCase):
             error = e
 
         self.assertTrue(isinstance(error, err_type))
-        self.assertEquals(err_msg, unicode(error))
+        self.assertEqual(err_msg, str(error))
 
     def _test_timer(self, state, check_calls):
         asset_pk = '1234'
@@ -635,7 +635,7 @@ class UploadAssetTestCase(TestCase):
     def test_upgrade_timer_attached(self):
 
         def check_calls(asset):
-            self.assertEquals(0, asset_manager.downgrade_asset.call_count)
+            self.assertEqual(0, asset_manager.downgrade_asset.call_count)
 
         self._test_timer('attached', check_calls)
 
@@ -662,7 +662,7 @@ class ResourceModelTestCase(TestCase):
         )
 
         uri = 'http://testserver.com/charging/api/assetManagement/assets/' + res.pk
-        self.assertEquals(url, res.get_url())
-        self.assertEquals(uri, res.get_uri())
+        self.assertEqual(url, res.get_url())
+        self.assertEqual(uri, res.get_uri())
 
         reload(models)

@@ -18,8 +18,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
+
+
 
 import threading
 import importlib
@@ -178,7 +178,7 @@ class ChargingEngine:
 
                 usage_client.rate_usage(
                     sdr['usage_id'],
-                    unicode(contract.last_charge),
+                    str(contract.last_charge),
                     sdr['duty_free'],
                     sdr['price'],
                     sdr_info['model']['tax_rate'],

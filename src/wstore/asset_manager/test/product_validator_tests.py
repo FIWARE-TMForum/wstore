@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from mock import MagicMock, call
 from nose_parameterized import parameterized
@@ -188,7 +188,7 @@ class ValidatorTestCase(TestCase):
             error = e
 
         self.assertTrue(isinstance(error, err_type))
-        self.assertEquals(err_msg, unicode(error))
+        self.assertEqual(err_msg, str(error))
 
     def _mock_upgrading_asset(self, version):
         self._asset_instance.state = 'upgrading'
@@ -211,8 +211,8 @@ class ValidatorTestCase(TestCase):
         validator = product_validator.ProductValidator()
         validator.validate('upgrade', self._provider, UPGRADE_PRODUCT['product'])
 
-        self.assertEquals(UPGRADE_PRODUCT['product']['version'], self._asset_instance.version)
-        self.assertEquals('upgrading', self._asset_instance.state)
+        self.assertEqual(UPGRADE_PRODUCT['product']['version'], self._asset_instance.version)
+        self.assertEqual('upgrading', self._asset_instance.state)
         self._asset_instance.save.assert_called_once_with()
 
         product_validator.DocumentLock.assert_called_once_with('wstore_resource', self._asset_instance.pk, 'asset')
@@ -231,7 +231,7 @@ class ValidatorTestCase(TestCase):
         validator = product_validator.ProductValidator()
         validator.validate('attach_upgrade', self._provider, UPGRADE_PRODUCT['product'])
 
-        self.assertEquals('attached', self._asset_instance.state)
+        self.assertEqual('attached', self._asset_instance.state)
 
         product_validator.InventoryUpgrader.assert_called_once_with(self._asset_instance)
         product_validator.InventoryUpgrader().start.assert_called_once_with()
@@ -249,7 +249,7 @@ class ValidatorTestCase(TestCase):
         validator.validate('attach_upgrade', self._provider, {'version': '1.0', 'productSpecCharacteristic':[]})
 
         # The method did nothing
-        self.assertEquals(0, product_validator.ResourcePlugin.objects.get.call_count)
+        self.assertEqual(0, product_validator.ResourcePlugin.objects.get.call_count)
 
     @parameterized.expand([
         ('missing_version', {}),
@@ -263,7 +263,7 @@ class ValidatorTestCase(TestCase):
         validator = product_validator.ProductValidator()
         validator.validate('upgrade', self._provider, data)
 
-        self.assertEquals('upgrading', self._asset_instance.state)
+        self.assertEqual('upgrading', self._asset_instance.state)
 
     def _non_digital(self):
         return [[], []]
@@ -293,7 +293,7 @@ class ValidatorTestCase(TestCase):
         validator.validate(BASIC_BUNDLE_CREATION['action'], self._provider, BASIC_BUNDLE_CREATION['product'])
 
         # Validate filter calls
-        self.assertEquals([
+        self.assertEqual([
             call(product_id=BASIC_BUNDLE_CREATION['product']['bundledProductSpecification'][0]['id']),
             call(product_id=BASIC_BUNDLE_CREATION['product']['bundledProductSpecification'][1]['id'])
         ], product_validator.Resource.objects.filter.call_args_list)
@@ -309,7 +309,7 @@ class ValidatorTestCase(TestCase):
                 bundled_assets=expected_assets
             )
         else:
-            self.assertEquals(0, product_validator.Resource.objects.call_count)
+            self.assertEqual(0, product_validator.Resource.objects.call_count)
 
     def _validate_bundle_creation_error(self, product_request, msg, side_effect=None):
         self._mock_validator_imports(product_validator)
@@ -323,7 +323,7 @@ class ValidatorTestCase(TestCase):
         except ProductError as e:
             error = e
 
-        self.assertEquals(msg, unicode(error))
+        self.assertEqual(msg, str(error))
 
     def test_bundle_creation_missing_products(self):
         self._validate_bundle_creation_error({
@@ -387,25 +387,25 @@ class ValidatorTestCase(TestCase):
         validator.parse_characteristics.assert_called_once_with(product_spec)
         if is_digital:
             product_validator.Resource.objects.get.assert_called_once_with(download_link=digital_chars[2])
-            self.assertEquals(0, product_validator.Resource.objects.filter.call_count)
+            self.assertEqual(0, product_validator.Resource.objects.filter.call_count)
 
         if is_bundle:
-            self.assertEquals([
+            self.assertEqual([
                 call(product_id=None, provider=self._provider, content_type='bundle', resource_path='', download_link=''),
                 call(product_id='1'),
                 call(product_id='2')
             ], product_validator.Resource.objects.filter.call_args_list)
-            self.assertEquals(0, product_validator.Resource.objects.get.call_count)
+            self.assertEqual(0, product_validator.Resource.objects.get.call_count)
 
         if is_attached:
-            self.assertEquals(product_spec['id'], self._asset_instance.product_id)
-            self.assertEquals(product_spec['version'], self._asset_instance.version)
-            self.assertEquals(digital_chars[0], self._asset_instance.resource_type)
-            self.assertEquals('attached', self._asset_instance.state)
+            self.assertEqual(product_spec['id'], self._asset_instance.product_id)
+            self.assertEqual(product_spec['version'], self._asset_instance.version)
+            self.assertEqual(digital_chars[0], self._asset_instance.resource_type)
+            self.assertEqual('attached', self._asset_instance.state)
 
             self._asset_instance.save.assert_called_once_with()
         else:
-            self.assertEquals(0, self._asset_instance.save.call_count)
+            self.assertEqual(0, self._asset_instance.save.call_count)
 
     @parameterized.expand([
         ('no_chars', NO_CHARS_PRODUCT),
@@ -416,9 +416,9 @@ class ValidatorTestCase(TestCase):
         validator = product_validator.ProductValidator()
         validator.validate('create', self._provider, product)
 
-        self.assertEquals(0, product_validator.ResourcePlugin.objects.get.call_count)
-        self.assertEquals(0, product_validator.Resource.objects.get.call_count)
-        self.assertEquals(0, product_validator.Resource.objects.create.call_count)
+        self.assertEqual(0, product_validator.ResourcePlugin.objects.get.call_count)
+        self.assertEqual(0, product_validator.Resource.objects.get.call_count)
+        self.assertEqual(0, product_validator.Resource.objects.create.call_count)
 
     def _validate_offering_calls(self, offering, asset, is_digital):
         # Check resource retrieving if needed
@@ -442,7 +442,7 @@ class ValidatorTestCase(TestCase):
         self._validate_offering_calls(offering, None, False)
 
     def _validate_bundle_offering_calls(self, offering, is_digital):
-        self.assertEquals(
+        self.assertEqual(
             [call(off_id=off['id']) for off in offering['bundledProductOffering']],
             offering_validator.Offering.objects.filter.call_args_list)
 
@@ -536,9 +536,9 @@ class ValidatorTestCase(TestCase):
 
         if msg is not None:
             self.assertTrue(isinstance(error, ValueError))
-            self.assertEquals(msg, unicode(error))
+            self.assertEqual(msg, str(error))
         else:
-            self.assertEquals(error, None)
+            self.assertEqual(error, None)
 
             # Validate calls
             checker(self, offering)
@@ -551,8 +551,8 @@ class ValidatorTestCase(TestCase):
         validator = offering_validator.OfferingValidator()
         validator.validate('attach', self._provider, BASIC_OFFERING)
 
-        self.assertEquals(BASIC_OFFERING['href'], offering.href)
-        self.assertEquals(BASIC_OFFERING['id'], offering.off_id)
+        self.assertEqual(BASIC_OFFERING['href'], offering.href)
+        self.assertEqual(BASIC_OFFERING['id'], offering.off_id)
 
         offering.save.assert_called_once_with()
 
@@ -567,7 +567,7 @@ class ValidatorTestCase(TestCase):
         except ValueError as e:
             error = e
 
-        self.assertEquals('The specified offering has not been registered', unicode(error))
+        self.assertEqual('The specified offering has not been registered', str(error))
 
     def _mock_non_attached(self):
         self._asset_instance.product_id = None
@@ -593,17 +593,17 @@ class ValidatorTestCase(TestCase):
         self._asset_instance.delete.assert_called_once_with()
 
     def _validate_non_upgraded(self):
-        self.assertEquals('1.0', self._asset_instance.version)
-        self.assertEquals('type', self._asset_instance.content_type)
-        self.assertEquals('/old/path', self._asset_instance.resource_path)
-        self.assertEquals('http://host/old/path', self._asset_instance.download_link)
+        self.assertEqual('1.0', self._asset_instance.version)
+        self.assertEqual('type', self._asset_instance.content_type)
+        self.assertEqual('/old/path', self._asset_instance.resource_path)
+        self.assertEqual('http://host/old/path', self._asset_instance.download_link)
         self._asset_instance.save.assert_called_once_with()
 
     def _validate_not_called(self):
-        self.assertEquals(0, self._asset_instance.delete.call_count)
+        self.assertEqual(0, self._asset_instance.delete.call_count)
 
     def _validate_non_downgraded(self):
-        self.assertEquals('/new/path', self._asset_instance.resource_path)
+        self.assertEqual('/new/path', self._asset_instance.resource_path)
 
     @parameterized.expand([
         ('create_non_att', 'rollback_create', BASIC_PRODUCT['product'], _mock_non_attached, _validate_non_attached),

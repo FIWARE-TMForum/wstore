@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from datetime import datetime
 
@@ -36,7 +36,7 @@ class ChargesDaemonTestCase(TestCase):
     def setUp(self):
         # Mock datetime
         pending_charges_daemon.datetime = MagicMock()
-        pending_charges_daemon.datetime.utcnow.return_value = datetime(2016, 02, 8)
+        pending_charges_daemon.datetime.utcnow.return_value = datetime(2016, 0o2, 8)
 
         # Mock inventory client
         pending_charges_daemon.InventoryClient = MagicMock()
@@ -94,7 +94,7 @@ class ChargesDaemonTestCase(TestCase):
         command.handle()
 
         # Validate calls
-        self.assertEquals([call(), call()], pending_charges_daemon.NotificationsHandler.call_args_list)
+        self.assertEqual([call(), call()], pending_charges_daemon.NotificationsHandler.call_args_list)
 
         pending_charges_daemon.NotificationsHandler().send_payment_required_notification.assert_called_once_with(order, contracts[2])
         pending_charges_daemon.InventoryClient.assert_called_once_with()
@@ -107,23 +107,23 @@ class ChargesDaemonTestCase(TestCase):
     def test_subscription_renovation(self):
 
         # Not expired
-        contract1 = self._build_subscription_contract(datetime(2016, 03, 01), '1')
+        contract1 = self._build_subscription_contract(datetime(2016, 0o3, 0o1), '1')
 
         # About to expire
-        contract2 = self._build_subscription_contract(datetime(2016, 02, 10), '2')
+        contract2 = self._build_subscription_contract(datetime(2016, 0o2, 10), '2')
 
         # Expired
-        contract3 = self._build_subscription_contract(datetime(2016, 01, 31), '3')
+        contract3 = self._build_subscription_contract(datetime(2016, 0o1, 31), '3')
 
         self._test_charging_daemon([contract1, contract2, contract3])
 
     def test_usage_renovation(self):
 
         # Not expired
-        contract1 = self._build_usage_contract(datetime(2016, 03, 01), '1')
+        contract1 = self._build_usage_contract(datetime(2016, 0o3, 0o1), '1')
 
         # About to expire
-        contract2 = self._build_usage_contract(datetime(2016, 01, 11), '2')
+        contract2 = self._build_usage_contract(datetime(2016, 0o1, 11), '2')
 
         # Expired
         contract3 = self._build_usage_contract(datetime(2015, 12, 31), '3')

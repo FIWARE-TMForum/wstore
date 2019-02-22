@@ -19,7 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import unicode_literals
+
 
 import os
 import smtplib
@@ -27,7 +27,7 @@ from email import encoders
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
-from urlparse import urljoin
+from urllib.parse import urljoin
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -158,7 +158,7 @@ class NotificationsHandler:
         url = urljoin(domain, '/#/inventory/order/' + order.order_id)
 
         text = 'Your subscription belonging to the product offering ' + contract.offering.name + '\n'
-        text += 'is going to expire in ' + unicode(days) + ' days. \n\n'
+        text += 'is going to expire in ' + str(days) + ' days. \n\n'
         text += 'You can renovate all your pending subscriptions of the order with reference ' + order.pk + '\n'
         text += 'in the web portal or accessing the following link: \n\n'
         text += url

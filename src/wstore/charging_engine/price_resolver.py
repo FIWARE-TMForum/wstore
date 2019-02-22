@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from decimal import Decimal
 
@@ -55,11 +55,11 @@ class PriceResolver:
                     }
                     comp_price = (Decimal(sdr['value']) * Decimal(component['value']))
                     partial_price += comp_price
-                    sdr_info['price'] = unicode(comp_price)
+                    sdr_info['price'] = str(comp_price)
 
                     comp_duty_free = (Decimal(sdr['value']) * Decimal(component['duty_free']))
                     partial_duty_free += comp_duty_free
-                    sdr_info['duty_free'] = unicode(comp_duty_free)
+                    sdr_info['duty_free'] = str(comp_duty_free)
 
                     # Save the information of the SDR document which is needed for further precessing
                     related_accounting.append(sdr_info)
@@ -68,8 +68,8 @@ class PriceResolver:
             self._applied_sdrs.append({
                 'model': component,
                 'accounting': related_accounting,
-                'price': unicode(partial_price),
-                'duty_free': unicode(partial_duty_free)
+                'price': str(partial_price),
+                'duty_free': str(partial_duty_free)
             })
 
             price += partial_price
@@ -164,4 +164,4 @@ class PriceResolver:
         price = price.quantize(Decimal('10') ** -2)
         duty_free = duty_free.quantize(Decimal('10') ** -2)
 
-        return unicode(price), unicode(duty_free)
+        return str(price), str(duty_free)

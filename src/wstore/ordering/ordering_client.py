@@ -18,10 +18,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import requests
-from urlparse import urljoin
+from urllib.parse import urljoin
 
 from django.core.exceptions import ImproperlyConfigured
 from django.conf import settings
@@ -54,7 +54,7 @@ class OrderingClient:
             raise ImproperlyConfigured(msg)
 
     def get_order(self, order_id):
-        path = '/DSProductOrdering/api/productOrdering/v2/productOrder/' + unicode(order_id)
+        path = '/DSProductOrdering/api/productOrdering/v2/productOrder/' + str(order_id)
         url = urljoin(self._ordering_api, path)
 
         r = requests.get(url)
@@ -76,7 +76,7 @@ class OrderingClient:
         }
 
         # Make PATCH request
-        path = '/DSProductOrdering/api/productOrdering/v2/productOrder/' + unicode(order['id'])
+        path = '/DSProductOrdering/api/productOrdering/v2/productOrder/' + str(order['id'])
         url = urljoin(self._ordering_api, path)
 
         r = requests.patch(url, json=patch)
@@ -109,7 +109,7 @@ class OrderingClient:
             patch['orderItem'].append(orderItem)
 
         # Make PATCH request
-        path = '/DSProductOrdering/api/productOrdering/v2/productOrder/' + unicode(order['id'])
+        path = '/DSProductOrdering/api/productOrdering/v2/productOrder/' + str(order['id'])
         url = urljoin(self._ordering_api, path)
 
         r = requests.patch(url, json=patch)

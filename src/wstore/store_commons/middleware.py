@@ -19,7 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import unicode_literals
+
 
 from django.utils.importlib import import_module
 from django.utils.functional import SimpleLazyObject
@@ -51,7 +51,7 @@ class URLMiddleware(object):
                 raise exceptions.ImproperlyConfigured('%s isn\'t a middleware module' % middleware_path)
             try:
                 mod = import_module(mw_module)
-            except ImportError, e:
+            except ImportError as e:
                 raise exceptions.ImproperlyConfigured('Error importing middleware %s: "%s"' % (mw_module, e))
             try:
                 mw_class = getattr(mod, mw_classname)

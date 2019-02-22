@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import json
 from datetime import datetime
@@ -120,24 +120,24 @@ class OrderingCollectionTestCase(TestCase):
         collection = views.OrderingCollection(permitted_methods=('POST',))
         response, body = api_call(self, collection, data, side_effect, ["%s" % terms_accepted])
 
-        self.assertEquals(exp_code, response.status_code)
-        self.assertEquals(exp_response, body)
+        self.assertEqual(exp_code, response.status_code)
+        self.assertEqual(exp_response, body)
 
         if called:
             views.OrderingManager().process_order.assert_called_once_with(self.request.user, data, terms_accepted=terms_accepted)
 
             if redirect_url is None and not failed:
-                self.assertEquals([
+                self.assertEqual([
                     call(data, 'InProgress'),
                 ], views.OrderingClient().update_state.call_args_list)
 
-                self.assertEquals([
+                self.assertEqual([
                     call(data, 'Completed', [{'id': '2'}])
                 ], views.OrderingClient().update_items_state.call_args_list)
 
         if failed:
-            self.assertEquals([call(data, 'InProgress')], views.OrderingClient().update_state.call_args_list)
-            self.assertEquals([call(data, 'Failed')], views.OrderingClient().update_items_state.call_args_list)
+            self.assertEqual([call(data, 'InProgress')], views.OrderingClient().update_state.call_args_list)
+            self.assertEqual([call(data, 'Failed')], views.OrderingClient().update_items_state.call_args_list)
 
 
 BASIC_PRODUCT_EVENT = {
@@ -158,7 +158,7 @@ class InventoryCollectionTestCase(TestCase):
 
     tags = ('inventory', 'inventory-view')
 
-    _ren_date = datetime(2016, 06, 01)
+    _ren_date = datetime(2016, 0o6, 0o1)
 
     def _initial_charge(self):
         self.contract.charges = [MagicMock()]
@@ -218,22 +218,22 @@ class InventoryCollectionTestCase(TestCase):
         collection = views.InventoryCollection(permitted_methods=('POST',))
         response, body = api_call(self, collection, data, side_effect)
 
-        self.assertEquals(exp_code, response.status_code)
-        self.assertEquals(exp_response, body)
+        self.assertEqual(exp_code, response.status_code)
+        self.assertEqual(exp_response, body)
 
         if called:
             views.Order.objects.get.assert_called_once_with(order_id='23')
             views.on_product_acquired.assert_called_once_with(order, self.contract)
             views.InventoryClient.assert_called_once_with()
             views.InventoryClient().activate_product.assert_called_once_with(1)
-            self.assertEquals(1, self.contract.product_id)
+            self.assertEqual(1, self.contract.product_id)
 
         if billing_exp:
             views.BillingClient.assert_called_once_with()
             views.BillingClient().create_charge.assert_called_once_with(
                 self.contract.charges[0], data['event']['product']['id'], start_date=None, end_date=exp_date)
         else:
-            self.assertEquals(0, views.BillingClient.call_count)
+            self.assertEqual(0, views.BillingClient.call_count)
 
 RENOVATION_DATA = {
     'name': 'oid=1',
@@ -343,11 +343,11 @@ class RenovationCollectionTestCase(TestCase):
         collection = views.RenovationCollection(permitted_methods=('POST', ))
         response, body = api_call(self, collection, data, side_effect)
 
-        self.assertEquals(exp_code, response.status_code)
-        self.assertEquals(exp_response, body)
+        self.assertEqual(exp_code, response.status_code)
+        self.assertEqual(exp_response, body)
 
         if url is not None:
-            self.assertEquals(url, response['X-Redirect-URL'])
+            self.assertEqual(url, response['X-Redirect-URL'])
         else:
             self.assertFalse('X-Redirect-URL' in response)
 

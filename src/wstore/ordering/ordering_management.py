@@ -18,13 +18,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import re
 import requests
 from decimal import Decimal
 from datetime import datetime
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 from django.conf import settings
 
@@ -76,7 +76,7 @@ class OrderingManager:
 
                 return off
 
-            map(owned_digital, included_offerings)
+            list(map(owned_digital, included_offerings))
 
         else:
             raise OrderingError('The offering ' + offering_id + ' has not been previously registered')
@@ -147,7 +147,7 @@ class OrderingManager:
         for off_price in offering_info['productOfferingPrice']:
 
             # Change the price to string in order to avoid problems with floats
-            product_price['price']['amount'] = unicode(product_price['price']['amount'])
+            product_price['price']['amount'] = str(product_price['price']['amount'])
 
             # Validate that all pricing fields matches
             if off_price['priceType'].lower() == product_price['priceType'].lower() and \

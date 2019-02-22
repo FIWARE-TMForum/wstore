@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from os import path, environ
 
@@ -195,7 +195,7 @@ CLIENTS = {
 NOTIF_CERT_FILE = None
 NOTIF_CERT_KEY_FILE = None
 
-from services_settings import *
+from .services_settings import *
 
 # =====================================
 # ENVIRONMENT SETTINGS
@@ -223,7 +223,7 @@ if PAYMENT_METHOD == 'None':
     PAYMENT_METHOD = None
 
 VERIFY_REQUESTS = environ.get('BAE_CB_VERIFY_REQUESTS', VERIFY_REQUESTS)
-if isinstance(VERIFY_REQUESTS, str) or isinstance(VERIFY_REQUESTS, unicode):
+if isinstance(VERIFY_REQUESTS, str) or isinstance(VERIFY_REQUESTS, str):
     VERIFY_REQUESTS = VERIFY_REQUESTS == 'True'
 
 SITE = environ.get('BAE_SERVICE_HOST', SITE)

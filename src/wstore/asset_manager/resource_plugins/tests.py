@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import os
 from mock import MagicMock, call
@@ -128,21 +128,21 @@ class PluginLoaderTestCase(TestCase):
             error = e
 
         if err_type is None:
-            self.assertEquals(error, None)
+            self.assertEqual(error, None)
             # Check calls
             self.manager_mock.validate_plugin_info.assert_called_once_with(expected)
 
             # Check plugin model
             plugin_model = ResourcePlugin.objects.all()[0]
-            self.assertEquals(plugin_model.name, expected['name'])
-            self.assertEquals(plugin_model.plugin_id, expected['name'].lower().replace(' ', '-'))
-            self.assertEquals(plugin_model.author, expected['author'])
-            self.assertEquals(plugin_model.version, expected['version'])
-            self.assertEquals(plugin_model.formats, expected['formats'])
+            self.assertEqual(plugin_model.name, expected['name'])
+            self.assertEqual(plugin_model.plugin_id, expected['name'].lower().replace(' ', '-'))
+            self.assertEqual(plugin_model.author, expected['author'])
+            self.assertEqual(plugin_model.version, expected['version'])
+            self.assertEqual(plugin_model.formats, expected['formats'])
 
-            self.assertEquals(plugin_model.module, 'wstore.test.' + plugin_model.plugin_id + '.' + expected['module'])
-            self.assertEquals(plugin_model.media_types, expected.get('media_types', []))
-            self.assertEquals(plugin_model.form, expected.get('form', {}))
+            self.assertEqual(plugin_model.module, 'wstore.test.' + plugin_model.plugin_id + '.' + expected['module'])
+            self.assertEqual(plugin_model.media_types, expected.get('media_types', []))
+            self.assertEqual(plugin_model.form, expected.get('form', {}))
 
             # Check plugin files
             test_plugin_dir = os.path.join(self.plugin_dir, plugin_model.plugin_id)
@@ -152,7 +152,7 @@ class PluginLoaderTestCase(TestCase):
 
         else:
             self.assertTrue(isinstance(error, err_type))
-            self.assertEquals(unicode(e), err_msg)
+            self.assertEqual(str(e), err_msg)
 
     def _plugin_in_use(self):
         plugin_loader.Resource.objects.filter.return_value = ['resource']
@@ -200,17 +200,17 @@ class PluginLoaderTestCase(TestCase):
             error = e
 
         if err_type is None:
-            self.assertEquals(error, None)
+            self.assertEqual(error, None)
             # Check calls
             plugin_loader.ResourcePlugin.objects.get.assert_called_once_with(plugin_id='test_plugin')
             plugin_loader.Resource.objects.filter.assert_called_once_with(resource_type=plugin_name)
             plugin_loader.rmtree.assert_called_once_with(os.path.join(plugin_l._plugins_path, 'test_plugin'))
             plugin_mock.delete.assert_called_once_with()
 
-            self.assertEquals(pull, plugin_mock.usage_called)
+            self.assertEqual(pull, plugin_mock.usage_called)
         else:
             self.assertTrue(isinstance(error, err_type))
-            self.assertEquals(unicode(e), err_msg)
+            self.assertEqual(str(e), err_msg)
 
 
 class PluginValidatorTestCase(TestCase):
@@ -259,7 +259,7 @@ class PluginValidatorTestCase(TestCase):
         plugin_manager = PluginValidator()
 
         reason = plugin_manager.validate_plugin_info(plugin_info)
-        self.assertEquals(reason, validation_msg)
+        self.assertEqual(reason, validation_msg)
 
 
 class PluginTestCase(TestCase):
@@ -390,14 +390,14 @@ class PluginTestCase(TestCase):
 
     def _not_called(self):
         self.assertEqual(0, self._usage_client.create_usage_spec.call_count)
-        self.assertEquals({}, self._model.options)
+        self.assertEqual({}, self._model.options)
 
     def _not_called_conf(self):
         self.assertEqual(0, self._usage_client.create_usage_spec.call_count)
-        self.assertEquals(self._option, self._model.options)
+        self.assertEqual(self._option, self._model.options)
 
     def _specs_created(self):
-        self.assertEquals([
+        self.assertEqual([
             call(self._call_specification),
             call(self._second_specification)], self._usage_client.create_usage_spec.call_args_list)
 
@@ -426,8 +426,8 @@ class PluginTestCase(TestCase):
         try:
             plugin_handler.configure_usage_spec()
         except PluginError as e:
-            self.assertEquals(
-                'Plugin Error: Invalid product specification configuration, must include name and description', unicode(e))
+            self.assertEqual(
+                'Plugin Error: Invalid product specification configuration, must include name and description', str(e))
 
     def _not_found_spec(self):
         error = HTTPError()
@@ -435,12 +435,12 @@ class PluginTestCase(TestCase):
         self._usage_client.delete_usage_spec.side_effect = error
 
     def _delete_not_called(self):
-        self.assertEquals(0, plugin.UsageClient.call_count)
-        self.assertEquals(0, self._usage_client.delete_usage_spec.call_count)
+        self.assertEqual(0, plugin.UsageClient.call_count)
+        self.assertEqual(0, self._usage_client.delete_usage_spec.call_count)
 
     def _delete_called(self):
         plugin.UsageClient.assert_called_once_with()
-        self.assertEquals([call('1'), call('2')], self._usage_client.delete_usage_spec.call_args_list)
+        self.assertEqual([call('1'), call('2')], self._usage_client.delete_usage_spec.call_args_list)
 
     def _already_deleted(self):
         plugin.UsageClient.assert_called_once_with()
@@ -480,7 +480,7 @@ class PluginTestCase(TestCase):
         try:
             plugin_handler.remove_usage_specs()
         except HTTPError as e:
-            self.assertEquals(500, e.response.status_code)
+            self.assertEqual(500, e.response.status_code)
 
     def _mock_order(self):
         asset = MagicMock()
@@ -523,9 +523,9 @@ class PluginTestCase(TestCase):
             self._usage_client.create_usage.assert_called_once_with(self._usage_record)
             self._usage_client.update_usage_state.assert_called_once_with('1', 'Guided')
 
-            self.assertEquals(1, contract.correlation_number)
-            self.assertEquals(usages[1], contract.last_usage)
-            self.assertEquals([call(), call()], order.save.call_args_list)
+            self.assertEqual(1, contract.correlation_number)
+            self.assertEqual(usages[1], contract.last_usage)
+            self.assertEqual([call(), call()], order.save.call_args_list)
 
     def test_usage_refresh_error(self):
         plugin_handler = plugin.Plugin(self._model)
@@ -535,8 +535,8 @@ class PluginTestCase(TestCase):
         try:
             plugin_handler.on_usage_refresh(asset, contract, order)
         except PluginError as e:
-            self.assertEquals(
-                'Plugin Error: Invalid usage record, it must include date, unit and value', unicode(e))
+            self.assertEqual(
+                'Plugin Error: Invalid usage record, it must include date, unit and value', str(e))
 
     def test_usage_refresh_not_pull(self):
         self._model.pull_accounting = False
@@ -544,7 +544,7 @@ class PluginTestCase(TestCase):
         plugin_handler.get_pending_accounting = MagicMock(return_value=([], None))
 
         plugin_handler.on_usage_refresh(None, None, None)
-        self.assertEquals(0, plugin_handler.get_pending_accounting.call_count)
+        self.assertEqual(0, plugin_handler.get_pending_accounting.call_count)
 
 
 class DecoratorsTestCase(TestCase):
@@ -591,10 +591,10 @@ class DecoratorsTestCase(TestCase):
         decorators.on_product_acquired(self._order, self._contract)
 
         # Check calls
-        self.assertEquals(
+        self.assertEqual(
             [call('asset'), call('asset'), call('asset3'), call('asset4')], decorators.load_plugin_module.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call(offering1.asset, self._contract, self._order),
             call(offering2.asset, self._contract, self._order),
             call(asset1, self._contract, self._order),

@@ -18,11 +18,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import requests
 from datetime import datetime
-from urlparse import urljoin
+from urllib.parse import urljoin
 
 from django.core.exceptions import ImproperlyConfigured
 from django.conf import settings
@@ -68,7 +68,7 @@ class InventoryClient:
                 raise ImproperlyConfigured(msg)
 
     def get_product(self, product_id):
-        url = self._inventory_api + '/api/productInventory/v2/product/' + unicode(product_id)
+        url = self._inventory_api + '/api/productInventory/v2/product/' + str(product_id)
 
         r = requests.get(url)
         r.raise_for_status()
@@ -83,7 +83,7 @@ class InventoryClient:
         """
 
         qs = '?'
-        for k, v in query.iteritems():
+        for k, v in list(query.items()):
             qs += '{}={}&'.format(k, v)
 
         url = self._inventory_api + '/api/productInventory/v2/product' + qs[:-1]
@@ -100,7 +100,7 @@ class InventoryClient:
         :param patch_body: New values for the product fields to be patched
         """
         # Build product url
-        url = self._inventory_api + '/api/productInventory/v2/product/' + unicode(product_id)
+        url = self._inventory_api + '/api/productInventory/v2/product/' + str(product_id)
 
         r = requests.patch(url, json=patch_body)
         r.raise_for_status()

@@ -51,7 +51,7 @@ PORTALINSTANCE = False
 
 THEME_ACTIVE = 'defaulttheme'
 
-SITE_ID=u'{{ site_id }}'
+SITE_ID='{{ site_id }}'
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 MEDIA_ROOT = path.join(BASEDIR, 'media')

@@ -18,11 +18,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from decimal import Decimal
 from requests import Session, Request
-from urlparse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin
 
 from django.conf import settings
 
@@ -51,7 +51,7 @@ class BillingClient:
             'taxIncludedAmount': charge_model.cost,
             'taxExcludedAmount': charge_model.duty_free,
             'appliedCustomerBillingTaxRate': [{
-                'amount': unicode(tax_rate),
+                'amount': str(tax_rate),
                 'taxCategory': 'VAT'
             }],
             'serviceId': [{

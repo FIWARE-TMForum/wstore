@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from django.core.management.base import BaseCommand, CommandError
 
@@ -43,7 +43,7 @@ class Command(BaseCommand):
             plugin_loader = PluginLoader()
             plugin_id = plugin_loader.install_plugin(path)
         except Exception as e:
-            raise CommandError(unicode(e))
+            raise CommandError(str(e))
 
         self.stdout.write("Your plugin has been loaded with id: " + plugin_id + "\n")
         self.stdout.write("If you want to retrieve the existing plugins, execute: python manage.py listplugins\n")

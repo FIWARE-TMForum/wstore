@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from wstore.models import UserProfile
 
@@ -94,12 +94,12 @@ class PurchaseRollback():
             # Call the decorated function
             result = self._funct(user, offering, org_owned, payment_info)
         except Exception as e:
-            if unicode(e) != "This offering can't be purchased" and unicode(e) != 'The offering has been already purchased'\
-                    and unicode(e) != 'Invalid payment method' and unicode(e) != 'Invalid credit card info'\
-                    and unicode(e) != 'The customer does not have a tax address' and unicode(e) != 'The customer does not have payment info'\
-                    and unicode(e) != 'Missing a required field in the tax address. It must contain street, postal, city, province and country'\
-                    and unicode(e) != 'Open asset_manager cannot be purchased' \
-                    and unicode(e) != 'You must accept the terms and conditions of the offering to acquire it':
+            if str(e) != "This offering can't be purchased" and str(e) != 'The offering has been already purchased'\
+                    and str(e) != 'Invalid payment method' and str(e) != 'Invalid credit card info'\
+                    and str(e) != 'The customer does not have a tax address' and str(e) != 'The customer does not have payment info'\
+                    and str(e) != 'Missing a required field in the tax address. It must contain street, postal, city, province and country'\
+                    and str(e) != 'Open asset_manager cannot be purchased' \
+                    and str(e) != 'You must accept the terms and conditions of the offering to acquire it':
 
                 # Get the purchase
                 if org_owned:

@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 import json
 from mock import call
@@ -77,18 +77,18 @@ class ServeMediaTestCase(TestCase):
 
     def _validate_res_call(self):
         views.Resource.objects.filter.assert_called_once_with(resource_path=self._resource_path)
-        self.assertEquals(0, views.Order.objects.get.call_count)
+        self.assertEqual(0, views.Order.objects.get.call_count)
 
     def _validate_off_call(self):
         self._validate_res_call()
-        self.assertEquals([
+        self.assertEqual([
             call(pk='offpk1'),
             call(pk='offpk2')
         ], views.Offering.objects.get.call_args_list)
 
     def _validate_bundle_call(self):
         self._validate_res_call()
-        self.assertEquals([
+        self.assertEqual([
             call(pk='offpk1'),
             call(pk='offpk2'),
             call(pk='offpk3'),
@@ -99,19 +99,19 @@ class ServeMediaTestCase(TestCase):
 
     def _validate_product_bundle_call(self):
         views.Resource.objects.filter.assert_called_once_with(resource_path=self._resource_path)
-        self.assertEquals([
+        self.assertEqual([
             call(pk='prodpk1'),
             call(pk='prodpk2')
         ], views.Resource.objects.get.call_args_list)
-        self.assertEquals(0, views.Order.objects.get.call_count)
+        self.assertEqual(0, views.Order.objects.get.call_count)
 
-        self.assertEquals([
+        self.assertEqual([
             call(pk='offpk1'),
             call(pk='offpk2')
         ], views.Offering.objects.get.call_args_list)
 
     def _validate_upgrading_call(self):
-        self.assertEquals([
+        self.assertEqual([
             call(resource_path=self._resource_path),
             call(state='upgrading', provider=self._org)
         ], views.Resource.objects.filter.call_args_list)
@@ -120,16 +120,16 @@ class ServeMediaTestCase(TestCase):
 
     def _validate_order_call(self):
         views.Order.objects.get.assert_called_once_with(pk='111111111111111111111111')
-        self.assertEquals(0, views.Resource.objects.get.call_count)
+        self.assertEqual(0, views.Resource.objects.get.call_count)
 
     def _validate_empty_call(self):
-        self.assertEquals(0, views.Resource.objects.get.call_count)
-        self.assertEquals(0, views.Order.objects.get.call_count)
+        self.assertEqual(0, views.Resource.objects.get.call_count)
+        self.assertEqual(0, views.Order.objects.get.call_count)
 
     def _validate_error(self, response, expected):
         resp = json.loads(response.content)
-        self.assertEquals(expected[0], response.status_code)
-        self.assertEquals(expected[1], resp)
+        self.assertEqual(expected[0], response.status_code)
+        self.assertEqual(expected[1], resp)
 
     def _validate_serve(self, response, expected):
         views.os.path.isfile(expected)
@@ -138,7 +138,7 @@ class ServeMediaTestCase(TestCase):
     def _validate_xfile(self, response, expected):
         views.os.path.isfile(expected)
         views.smart_str.assert_called_once_with(expected)
-        self.assertEquals('smart string', response['X-Sendfile'])
+        self.assertEqual('smart string', response['X-Sendfile'])
 
     def _public_asset(self):
         self._asset_inst.is_public = True

@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from bson import ObjectId
 from copy import deepcopy
@@ -328,7 +328,7 @@ class InventoryUpgraderTestCase(TestCase):
             'fields': 'id'
         })
 
-        self.assertEquals(0, self._client_instance.patch_product.call_count)
+        self.assertEqual(0, self._client_instance.patch_product.call_count)
 
     def test_inventory_upgrader_no_offerings(self):
         inventory_upgrader.Offering.objects.filter.return_value = []
@@ -338,8 +338,8 @@ class InventoryUpgraderTestCase(TestCase):
 
         inventory_upgrader.Offering.objects.filter.assert_called_once_with(asset=self._asset)
         inventory_upgrader.Resource.objects.filter.assert_called_once_with(bundled_assets=self._asset_pk)
-        self.assertEquals([], self._ctx_instance.failed_upgrades)
-        self.assertEquals(0, self._client_instance.get_products.call_count)
+        self.assertEqual([], self._ctx_instance.failed_upgrades)
+        self.assertEqual(0, self._client_instance.get_products.call_count)
 
         self._check_product_spec_retrieved()
 
@@ -352,7 +352,7 @@ class InventoryUpgraderTestCase(TestCase):
         upgrader.run()
 
         # Check calls
-        self.assertEquals([], self._ctx_instance.failed_upgrades)
+        self.assertEqual([], self._ctx_instance.failed_upgrades)
         self._check_single_get_call()
 
         self._check_product_spec_retrieved()
@@ -383,17 +383,17 @@ class InventoryUpgraderTestCase(TestCase):
 
         # Mock inventory client methods
         self._client_instance.get_products.side_effect = [
-            [{'id': unicode(i)} for i in range(1, 6)],  # First call
+            [{'id': str(i)} for i in range(1, 6)],  # First call
             [self._product1, self._product2],  # Second call
             [self._product3, self._product4],  # Third call
             [self._product5],  # Last call
-            [{'id': unicode(i)} for i in range(6, 7)],  # First call
+            [{'id': str(i)} for i in range(6, 7)],  # First call
             [self._product6],  # Last call
-            [{'id': unicode(i)} for i in range(7, 8)],
+            [{'id': str(i)} for i in range(7, 8)],
             [self._product_p_bundle],
-            [{'id': unicode(i)} for i in range(8, 9)],
+            [{'id': str(i)} for i in range(8, 9)],
             [self._product_off_bundle],
-            [{'id': unicode(i)} for i in range(9, 10)],
+            [{'id': str(i)} for i in range(9, 10)],
             [self._product_mix_bundle]
         ]
 
@@ -407,29 +407,29 @@ class InventoryUpgraderTestCase(TestCase):
         upgrader.run()
 
         inventory_upgrader.Resource.objects.filter.assert_called_once_with(bundled_assets=self._asset_pk)
-        self.assertEquals([
+        self.assertEqual([
             call(asset=self._asset),
             call(asset=asset_bundle),
             call(bundled_offerings=self._product_off_pk),
             call(bundled_offerings=self._product_off_pk2),
             call(bundled_offerings=self._product_off_pk3),
             call(off_id=self._product_off_id),
-            call(off_id=u'asd'),
+            call(off_id='asd'),
             call(off_id=self._product_off_id),
-            call(off_id=u'asd'),
+            call(off_id='asd'),
             call(off_id=self._product_off_id),
-            call(off_id=u'asd'),
+            call(off_id='asd'),
             call(off_id=self._product_off_id3),
             call(off_id=self._product_off_id3),
             call(off_id=self._product_off_id3),
-            call(off_id=u'asd'),
-            call(off_id=u'asd'),
-            call(off_id=u'asd')], inventory_upgrader.Offering.objects.filter.call_args_list)
+            call(off_id='asd'),
+            call(off_id='asd'),
+            call(off_id='asd')], inventory_upgrader.Offering.objects.filter.call_args_list)
 
         # Check calls
-        self.assertEquals([], self._ctx_instance.failed_upgrades)
+        self.assertEqual([], self._ctx_instance.failed_upgrades)
 
-        self.assertEquals([
+        self.assertEqual([
             call(query={
                 'productOffering.id': self._product_off_id,
                 'fields': 'id'
@@ -491,7 +491,7 @@ class InventoryUpgraderTestCase(TestCase):
             'value': '20mbps'
         })
 
-        self.assertEquals([
+        self.assertEqual([
             call('1', {
                 'productCharacteristic': exp_charp1
             }),
@@ -521,7 +521,7 @@ class InventoryUpgraderTestCase(TestCase):
             })
         ], self._client_instance.patch_product.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call(order_id='11'),
             call(order_id='22'),
             call(order_id='33'),
@@ -533,13 +533,13 @@ class InventoryUpgraderTestCase(TestCase):
             call(order_id='99')
         ], inventory_upgrader.Order.objects.get.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call('1'), call('2'), call('3'), call('4'), call('5'), call('6'), call('7'), call('8'), call('9')
         ], self._order_int.get_product_contract.call_args_list)
 
-        self.assertEquals([call() for i in range(0, 9)], inventory_upgrader.NotificationsHandler.call_args_list)
+        self.assertEqual([call() for i in range(0, 9)], inventory_upgrader.NotificationsHandler.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call(self._order_int, self._order_int.get_product_contract(), self._product_spec_name) for i in range(0, 9)
         ], self._not_handler.send_product_upgraded_notification.call_args_list)
 
@@ -551,7 +551,7 @@ class InventoryUpgraderTestCase(TestCase):
 
         # Mock inventory client methods
         self._client_instance.get_products.side_effect = [
-            [{'id': unicode(i)} for i in range(1, 5)],  # First call off1
+            [{'id': str(i)} for i in range(1, 5)],  # First call off1
             HTTPError(),  # Second call - HTTPError retrieving page
             [self._product3, self._product4],  # Last call off1
             HTTPError()  # Error retrieving second offering
@@ -566,7 +566,7 @@ class InventoryUpgraderTestCase(TestCase):
         upgrader.run()
 
         # Check calls
-        self.assertEquals([{
+        self.assertEqual([{
             'asset_id': self._asset_pk,
             'pending_offerings': [self._product_off_id2],
             'pending_products': ['1', '2']
@@ -577,7 +577,7 @@ class InventoryUpgraderTestCase(TestCase):
         self._lock_inst.wait_document.assert_called_once_with()
         self._lock_inst.unlock_document.assert_called_once_with()
 
-        self.assertEquals([
+        self.assertEqual([
             call(query={
                 'productOffering.id': self._product_off_id,
                 'fields': 'id'
@@ -596,7 +596,7 @@ class InventoryUpgraderTestCase(TestCase):
             })
         ], self._client_instance.get_products.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call('3', {
                 'productCharacteristic': self._new_asset_chars
             }),
@@ -605,16 +605,16 @@ class InventoryUpgraderTestCase(TestCase):
             })
         ], self._client_instance.patch_product.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call(order_id='33'),
             call(order_id='44'),
         ], inventory_upgrader.Order.objects.get.call_args_list)
 
-        self.assertEquals([call('3'), call('4')], self._order_int.get_product_contract.call_args_list)
+        self.assertEqual([call('3'), call('4')], self._order_int.get_product_contract.call_args_list)
 
-        self.assertEquals([call(), call()], inventory_upgrader.NotificationsHandler.call_args_list)
+        self.assertEqual([call(), call()], inventory_upgrader.NotificationsHandler.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call(self._order_int, self._order_int.get_product_contract(), self._product_spec_name),
             call(self._order_int, self._order_int.get_product_contract(), self._product_spec_name),
         ], self._not_handler.send_product_upgraded_notification.call_args_list)
@@ -625,7 +625,7 @@ class InventoryUpgraderTestCase(TestCase):
         inventory_upgrader.Offering.objects.filter.side_effect = [[MagicMock(off_id=self._product_off_id)], []]
 
         self._client_instance.get_products.side_effect = [
-            [{'id': unicode(i)} for i in range(3, 5)],  # First call
+            [{'id': str(i)} for i in range(3, 5)],  # First call
             [self._product3, self._product4],  # Last call
         ]
 
@@ -638,7 +638,7 @@ class InventoryUpgraderTestCase(TestCase):
         upgrader.run()
 
         # Check calls
-        self.assertEquals([{
+        self.assertEqual([{
             'asset_id': self._asset_pk,
             'pending_offerings': [],
             'pending_products': ['4']
@@ -649,7 +649,7 @@ class InventoryUpgraderTestCase(TestCase):
         self._lock_inst.wait_document.assert_called_once_with()
         self._lock_inst.unlock_document.assert_called_once_with()
 
-        self.assertEquals([
+        self.assertEqual([
             call(query={
                 'productOffering.id': self._product_off_id,
                 'fields': 'id'
@@ -660,7 +660,7 @@ class InventoryUpgraderTestCase(TestCase):
             })
         ], self._client_instance.get_products.call_args_list)
 
-        self.assertEquals([
+        self.assertEqual([
             call('3', {
                 'productCharacteristic': self._new_asset_chars
             }),
@@ -670,7 +670,7 @@ class InventoryUpgraderTestCase(TestCase):
         ], self._client_instance.patch_product.call_args_list)
 
         inventory_upgrader.requests.get.assert_called_once_with(self._product_spec_url)
-        self.assertEquals(0, self._resp.raise_for_status.call_count)
-        self.assertEquals(0, self._resp.json.call_count)
+        self.assertEqual(0, self._resp.raise_for_status.call_count)
+        self.assertEqual(0, self._resp.json.call_count)
 
-        self.assertEquals(0, inventory_upgrader.NotificationsHandler.call_count)
+        self.assertEqual(0, inventory_upgrader.NotificationsHandler.call_count)

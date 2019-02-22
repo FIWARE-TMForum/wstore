@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from django.conf import settings
 
@@ -57,7 +57,7 @@ class ModelManager(RSSManager):
         if field not in model_info:
             raise ValueError('Missing a required field in model info: ' + field)
 
-        if not isinstance(model_info[field], unicode) and not isinstance(model_info[field], str):
+        if not isinstance(model_info[field], str) and not isinstance(model_info[field], str):
             raise TypeError('Invalid type for ' + field + ' field')
 
     def _manage_rs_model(self, model_info, method):
@@ -70,8 +70,8 @@ class ModelManager(RSSManager):
 
         # Validate RS model
         model_info['aggregatorId'] = settings.WSTOREMAIL
-        model_info['aggregatorValue'] = unicode(model_info['aggregatorValue'])
-        model_info['ownerValue'] = unicode(model_info['ownerValue'])
+        model_info['aggregatorValue'] = str(model_info['aggregatorValue'])
+        model_info['ownerValue'] = str(model_info['ownerValue'])
         model_info['algorithmType'] = 'FIXED_PERCENTAGE'
 
         if 'stakeholders' not in model_info:

@@ -19,7 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import unicode_literals
+
 
 import json
 import importlib
@@ -160,7 +160,7 @@ class PayPalConfirmation(Resource):
             expl = ' due to an unexpected error'
             err_code = 500
             if isinstance(e, PaymentError) or isinstance(e, ValueError):
-                expl = ': ' + unicode(e)
+                expl = ': ' + str(e)
                 err_code = 403
 
             msg = 'The payment has been canceled' + expl

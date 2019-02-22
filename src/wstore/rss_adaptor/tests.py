@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+
 
 from bson import ObjectId
 
@@ -264,7 +264,7 @@ class ModelManagerTestCase(TestCase):
             self.manager._make_request.assert_called_once_with('POST', 'http://testhost.com/rssHost/rss/models', exp_data)
         else:
             self.assertTrue(isinstance(e, err_type))
-            self.assertEquals(err_msg, unicode(e))
+            self.assertEqual(err_msg, str(e))
 
     def test_update_model(self):
         self.manager.update_revenue_model(deepcopy(BASIC_MODEL))

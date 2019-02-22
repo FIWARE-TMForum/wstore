@@ -19,13 +19,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 
 from django.contrib.sites.models import Site
 
 from wstore.charging_engine.payment_client.payment_client import PaymentClient
 from wstore.store_commons.utils.method_request import MethodRequest
-from urllib2 import HTTPError
+from urllib.error import HTTPError
 
 
 FIPAY_ENDPOINT = 'http://antares.ls.fi.upm.es:8002'
@@ -58,11 +58,11 @@ class FiPayClient(PaymentClient):
 
         request = MethodRequest('POST', FIPAY_ENDPOINT + '/api/payment', body, headers)
 
-        opener = urllib2.build_opener()
+        opener = urllib.request.build_opener()
 
         try:
             response = opener.open(request)
-        except HTTPError, e:
+        except HTTPError as e:
             if e.code == 401:
                 msg = 'The connection with FiPay has returned an unauthorized code, this can happen if you have never accessed FiPay, so your user profile has not been created.'
             else:
@@ -87,7 +87,7 @@ class FiPayClient(PaymentClient):
 
         request = MethodRequest('POST', FIPAY_ENDPOINT+ '/api/end', body, headers)
 
-        opener = urllib2.build_opener()
+        opener = urllib.request.build_opener()
 
         try:
             opener.open(request)

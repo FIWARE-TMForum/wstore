@@ -21,7 +21,7 @@
 import json
 import socket
 
-from urlparse import urljoin
+from urllib.parse import urljoin
 from xml.dom.minidom import getDOMImplementation
 
 from django.conf import settings
@@ -65,7 +65,7 @@ def build_response(request, status_code, msg, extra_formats=None, headers=None):
     if request.META.get('HTTP_X_REQUESTED_WITH', '') == 'XMLHttpRequest':
         mimetype = 'application/json; charset=utf-8'
     else:
-        mimetype = mimeparser.best_match(formatters.keys(), request.META.get('HTTP_ACCEPT', 'text/plain'))
+        mimetype = mimeparser.best_match(list(formatters.keys()), request.META.get('HTTP_ACCEPT', 'text/plain'))
 
     response = HttpResponse(formatters[mimetype](request, mimetype, status_code, msg), content_type=mimetype, status=status_code)
     if headers is None:
