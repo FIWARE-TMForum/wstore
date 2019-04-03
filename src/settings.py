@@ -20,7 +20,7 @@
 
 
 
-from os import path, environ
+from os import path, environ ,schedule
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -180,11 +180,10 @@ AUTHENTICATION_BACKENDS = (
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 # Daily job that checks pending pay-per-use charges
-CRONJOBS = [
-    ('0 5 * * *', 'django.core.management.call_command', ['pending_charges_daemon']),
-    ('0 6 * * *', 'django.core.management.call_command', ['resend_cdrs']),
-    ('0 4 * * *', 'django.core.management.call_command', ['resend_upgrade'])
-]
+    schedule.every().day.at("05:00").do(django.core.management.call_command(pending_charges_daemon))
+    schedule.every().day.at("06:00").do(django.core.management.call_command(resend_cdrs))
+    schedule.every().day.at("04:00").do(django.core.management.call_command(resend_upgrade))
+
 
 CLIENTS = {
     'paypal': 'wstore.charging_engine.payment_client.paypal_client.PayPalClient',
