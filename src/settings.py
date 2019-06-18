@@ -110,7 +110,6 @@ INSTALLED_APPS = (
     'wstore',
     'wstore.store_commons',
     'wstore.charging_engine',
-    'django_crontab',
     'django_nose'
 )
 
@@ -183,7 +182,7 @@ TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
     schedule.every().day.at("05:00").do(django.core.management.call_command(pending_charges_daemon))
     schedule.every().day.at("06:00").do(django.core.management.call_command(resend_cdrs))
     schedule.every().day.at("04:00").do(django.core.management.call_command(resend_upgrade))
-
+    schedule.run_pending()
 
 CLIENTS = {
     'paypal': 'wstore.charging_engine.payment_client.paypal_client.PayPalClient',

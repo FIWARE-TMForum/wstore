@@ -28,8 +28,8 @@ from django.contrib.auth.models import AnonymousUser
 from django.test.utils import override_settings
 from django.test import TestCase
 
-from wstore.store_commons import middleware, rollback, database
-from wstore.store_commons.utils.url import is_valid_url
+from store_commons import middleware, rollback, database
+from store_commons.utils.url import is_valid_url
 
 __test__ = False
 

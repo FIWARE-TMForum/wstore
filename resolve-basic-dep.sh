@@ -65,9 +65,9 @@ elif [[  $DIST == "rhel" ]]; then
     # Download and compile python 2.7
     if [[ $VER == "6" ]]; then
         cd /opt
-        wget --no-check-certificate https://www.python.org/ftp/python/2.7.6/Python-2.7.6.tar.xz
-        tar xf Python-2.7.6.tar.xz
-        cd Python-2.7.6
+        wget --no-check-certificate https://www.python.org/ftp/python/3.5.6/Python-3.5.6.tar.xz
+        tar xf Python-3.5.6.tar.xz
+        cd Python-3.5.6
         ./configure --prefix=/usr/local --enable-shared
         make && make altinstall
 
@@ -77,11 +77,11 @@ elif [[  $DIST == "rhel" ]]; then
         # Install python 2.7 setup tools
         cd /opt
         wget https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py
-        sudo /usr/local/bin/python2.7 ez_setup.py
-        sudo /usr/local/bin/easy_install-2.7 pip
+        sudo /usr/local/bin/python3.5 ez_setup.py
+        sudo /usr/local/bin/easy_install-3.5 pip3
 
-        ln -s /usr/local/bin/python2.7 /usr/bin/python2.7
-        ln -s /usr/local/bin/pip2.7 /usr/bin/pip2.7
+        ln -s /usr/local/bin/python3.5 /usr/bin/python3
+        ln -s /usr/local/bin/pip3.5 /usr/bin/pip3
     else
         rpm -iUvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
         yum -y update
@@ -139,4 +139,3 @@ else
     echo "Tested under: Ubuntu 12.04, Ubuntu 13.10, Ubuntu 14.04, CentOS 6.3, CentOS 6.5"
     exit 1
 fi
-

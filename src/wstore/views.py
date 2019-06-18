@@ -27,7 +27,7 @@ from django.utils.encoding import smart_str
 from django.views.static import serve
 from django.http import HttpResponse
 
-from .store_commons.utils.http import build_response
+from store_commons.utils.http import build_response
 from wstore.store_commons.resource import Resource as API_Resource
 
 from wstore.models import Resource, Organization

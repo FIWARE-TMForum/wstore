@@ -23,12 +23,12 @@
 import json
 from mock import call
 
-from wstore.store_commons.tests import *
-from wstore.admin.users.tests import *
+from store_commons.tests import *
+from admin.users.tests import *
 
 from django.test.client import RequestFactory
 
-from wstore import views
+import views
 
 
 class ServeMediaTestCase(TestCase):
