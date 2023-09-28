@@ -23,6 +23,8 @@ from decimal import Decimal
 
 import requests
 
+from django.conf import settings
+
 from wstore.asset_manager.catalog_validator import CatalogValidator
 from wstore.asset_manager.models import Resource
 from wstore.asset_manager.resource_plugins.decorators import on_product_offering_validation
@@ -67,6 +69,25 @@ class OfferingValidator(CatalogValidator):
         asset.is_public = is_open
         asset.save()
 
+    def _get_price(self, id_):
+        url = "{}/productOfferingPrice/{}".format(settings.CATALOG, id_)
+        resp = requests.get(url)
+
+        if resp.status_code != 200:
+            raise ValueError("Invalid pricing reference")
+
+        return resp.json()
+
+    def _validate_value_price(self, price):
+        if "unit" not in price:
+            raise ValueError("Missing currency code in price")
+
+        if not CurrencyCode.contains(price["unit"]):
+            raise ValueError("Unrecognized currency: " + price["unit"])
+
+        if Decimal(price["value"]) <= Decimal("0"):
+            raise ValueError("Invalid price, it must be greater than zero.")
+
     @on_product_offering_validation
     def _validate_offering_pricing(self, provider, product_offering, bundled_offerings):
         is_open = False
@@ -74,7 +95,14 @@ class OfferingValidator(CatalogValidator):
         # Validate offering pricing fields
         if "productOfferingPrice" in product_offering:
             names = []
-            for price_model in product_offering["productOfferingPrice"]:
+
+            # Check if the pricing is included or it is needed to download it
+            for price in product_offering["productOfferingPrice"]:
+                if "id" in price and "href" in price and "priceType" not in price:
+                    price_model = self._get_price(price["id"])
+                else:
+                    price_model = price
+
                 if "name" not in price_model:
                     raise ValueError("Missing required field name in productOfferingPrice")
 
@@ -85,7 +113,7 @@ class OfferingValidator(CatalogValidator):
 
                 # Check if the offering is an open offering
                 if price_model["name"].lower() == "open" and (
-                    len(price_model.keys()) == 1 or (len(price_model.keys()) == 2 and "description" in price_model)
+                    len(price_model.keys()) == 3 or (len(price_model.keys()) == 4 and "description" in price_model)
                 ):
                     is_open = True
                     continue
@@ -101,26 +129,23 @@ class OfferingValidator(CatalogValidator):
                 ):
                     raise ValueError("Invalid priceType, it must be one time, recurring, or usage")
 
-                if price_model["priceType"] == "recurring" and "recurringChargePeriod" not in price_model:
-                    raise ValueError("Missing required field recurringChargePeriod for recurring priceType")
+                if price_model["priceType"] == "recurring" and "recurringChargePeriodType" not in price_model:
+                    raise ValueError("Missing required field recurringChargePeriodType for recurring priceType")
 
                 if price_model["priceType"] == "recurring" and not ChargePeriod.contains(
-                    price_model["recurringChargePeriod"]
+                    price_model["recurringChargePeriodType"]
                 ):
-                    raise ValueError("Unrecognized recurringChargePeriod: " + price_model["recurringChargePeriod"])
+                    raise ValueError("Unrecognized recurringChargePeriodType: " + price_model["recurringChargePeriodType"])
 
                 # Validate currency
                 if "price" not in price_model:
                     raise ValueError("Missing required field price in productOfferingPrice")
 
-                if "currencyCode" not in price_model["price"]:
-                    raise ValueError("Missing required field currencyCode in price")
+                price_unit = price_model["price"]
+                if "taxIncludedAmount" in price_model["price"]:
+                    price_unit = price_model["price"]["taxIncludedAmount"]
 
-                if not CurrencyCode.contains(price_model["price"]["currencyCode"]):
-                    raise ValueError("Unrecognized currency: " + price_model["price"]["currencyCode"])
-
-                if Decimal(price_model["price"]["taxIncludedAmount"]) <= Decimal("0"):
-                    raise ValueError("Invalid price, it must be greater than zero.")
+                self._validate_value_price(price_unit)
 
             if is_open and len(names) > 1:
                 raise ValueError("Open offerings cannot include price plans")

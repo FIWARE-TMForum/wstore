@@ -55,25 +55,25 @@ class WstoreConfig(AppConfig):
             if not len(Context.objects.all()):
                 Context.objects.create(failed_cdrs=[], failed_upgrades=[])
 
-            inventory = InventoryClient()
-            inventory.create_inventory_subscription()
+            # inventory = InventoryClient()
+            # inventory.create_inventory_subscription()
 
-            # Create RSS default aggregator and provider
-            credentials = {
-                "user": settings.STORE_NAME,
-                "roles": [settings.ADMIN_ROLE],
-                "email": settings.WSTOREMAIL,
-            }
-            prov_manager = ProviderManager(credentials)
+            # # Create RSS default aggregator and provider
+            # credentials = {
+            #     "user": settings.STORE_NAME,
+            #     "roles": [settings.ADMIN_ROLE],
+            #     "email": settings.WSTOREMAIL,
+            # }
+            # prov_manager = ProviderManager(credentials)
 
-            try:
-                prov_manager.register_aggregator(
-                    {
-                        "aggregatorId": settings.WSTOREMAIL,
-                        "aggregatorName": settings.STORE_NAME,
-                        "defaultAggregator": True,
-                    }
-                )
-            except Exception as e:  # If the error is a conflict means that the aggregator is already registered
-                if e.response.status_code != 409:
-                    raise e
+            # try:
+            #     prov_manager.register_aggregator(
+            #         {
+            #             "aggregatorId": settings.WSTOREMAIL,
+            #             "aggregatorName": settings.STORE_NAME,
+            #             "defaultAggregator": True,
+            #         }
+            #     )
+            # except Exception as e:  # If the error is a conflict means that the aggregator is already registered
+            #     if e.response.status_code != 409:
+            #         raise e
