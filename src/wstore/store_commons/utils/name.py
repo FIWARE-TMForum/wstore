@@ -20,8 +20,8 @@
 
 import re
 
-ID_REGEX = re.compile("^[\w -]+$")
-FILE_REGEX = re.compile("^[\w .-]+\.[\w]+$")
+ID_REGEX = re.compile(r"^[\w -]+$")
+FILE_REGEX = re.compile(r"^[\w .-]+\.[\w]+$")
 
 
 def is_valid_id(id_):

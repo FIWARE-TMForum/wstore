@@ -22,8 +22,30 @@
 import mock
 from django.test import TestCase
 from mock import MagicMock
+from parameterized import parameterized
 
+
+from wstore.charging_engine.payment_client import payment_client
 from wstore.charging_engine.payment_client import paypal_client
+from wstore.charging_engine.payment_client import stripe_client
+
+
+class PaymentClientTestCase(TestCase):
+    tags = "payment_client"
+
+    @parameterized.expand(
+        [
+            ("wstore.charging_engine.payment_client.stripe_client.StripeClient", stripe_client.StripeClient),
+            ("wstore.charging_engine.payment_client.error_client.ErrorClient"),
+        ]
+    )
+    def test_get_payment_client_class(self, client_full_name, client_class=None):
+        payment_client.settings = MagicMock(**{"PAYMENT_CLIENT": client_full_name})
+        try:
+            payment_client_class = payment_client.PaymentClient.get_payment_client_class()
+            assert payment_client_class == client_class
+        except ModuleNotFoundError:
+            assert client_class is None
 
 
 class PaypalTestCase(TestCase):
@@ -45,4 +67,71 @@ class PaypalTestCase(TestCase):
             }
         )
 
-        paypal_client.paypalrestsdk.Payout().create.assert_called_once_with()
+        paypal_client.paypalrestsdk.Payout().create.assert_called_once()
+
+
+class StripeTestCalse(TestCase):
+    tags = ("payment-client", "payment-client-stripe")
+
+    def setUp(self):
+        stripe_client.stripe = MagicMock()
+        stripe_client.Offering = MagicMock(**{"objects.get.return_value": MagicMock()})
+
+    @parameterized.expand(
+        [
+            (
+                "success",
+                MagicMock(name="order"),
+                [{"currency": "EUR", "price": 1000, "item": "test", "description": "test", "item_id": "test"}],
+            ),
+            ("no_transactions", MagicMock(name="order"), []),
+            ("session_error", MagicMock(name="order"), [], Exception("Test Exception")),
+        ]
+    )
+    def test_start_redirection_payment(self, name, order, transactions, checkout_error=None):
+        stripe_payment_client = stripe_client.StripeClient(order)
+        stripe_payment_client._order = MagicMock(
+            **{"contracts": [MagicMock(**transaction) for transaction in transactions]}
+        )
+
+        checkout_session = MagicMock(name="checkout_session")
+        checkout_session.id = "cs_test_a11lpqo9KV8xxEBtrURbzgouesMb3mEZnIosnHpOzVCrjQ7pHeSNDAHwUA"
+        checkout_session.url = "https://checkout.stripe.com/c/pay/test"
+        stripe_client.stripe.configure_mock(
+            **{
+                "checkout.Session.create.return_value": checkout_session,
+                "checkout.Session.create.side_effect": checkout_error,
+            }
+        )
+
+        try:
+            stripe_payment_client.start_redirection_payment(transactions)
+            error = None
+        except Exception as e:
+            error = e
+
+        stripe_client.stripe.checkout.Session.create.assert_called_once()
+        if error:
+            self.assertIsInstance(error, payment_client.PaymentClientError)
+        else:
+            self.assertEquals(stripe_payment_client.get_checkout_url(), "https://checkout.stripe.com/c/pay/test")
+
+    def test_end_redirection_payment(self):
+        stripe_payment_client = stripe_client.StripeClient(MagicMock())
+        self.assertEquals(stripe_payment_client.end_redirection_payment(session_id="test"), ["test"])
+
+    def test_refund(self):
+        stripe_payment_client = stripe_client.StripeClient(MagicMock())
+
+        checkout_session = MagicMock(name="checkout_session")
+        checkout_session.id = "cs_test_a11lpqo9KV8xxEBtrURbzgouesMb3mEZnIosnHpOzVCrjQ7pHeSNDAHwUA"
+        refund = MagicMock(name="refund")
+        refund.id = "rf_test_a11lpqo9KV8xxEBtrURbzgouesMb3mEZnIosnHpOzVCrjQ7pHeSNDAHwUA"
+        stripe_client.stripe.configure_mock(
+            **{
+                "checkout.Session.retrieve.return_value": checkout_session,
+                "Refund.create.return_value": refund,
+            }
+        )
+
+        self.assertEquals(stripe_payment_client.refund("test"), refund)

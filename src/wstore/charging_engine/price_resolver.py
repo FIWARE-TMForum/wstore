@@ -131,8 +131,6 @@ class PriceResolver:
         Calculates a price to be charged using a pricing
         model and accounting info.
         """
-        logger.debug(f"Calculating price with {pricing_model}")
-
         price = Decimal("0")
         duty_free = Decimal("0")
         # Check the pricing model
@@ -171,5 +169,7 @@ class PriceResolver:
         price = price.quantize(Decimal("10") ** -2)
         duty_free = duty_free.quantize(Decimal("10") ** -2)
 
-        logger.debug(f"Calculated price with {pricing_model}:\n" f"\tPrice: {price} | Duty_free: {duty_free}")
+        logger.debug(
+            f"Calculated price with models {pricing_model.keys()}:\n" f"\tPrice: {price} | Duty_free: {duty_free}"
+        )
         return str(price), str(duty_free)

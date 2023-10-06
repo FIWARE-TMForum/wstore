@@ -33,21 +33,20 @@ from parameterized import parameterized
 
 import wstore.store_commons.utils.http
 from wstore.charging_engine import charging_engine, views
+from wstore.charging_engine.payment_client import payment_client as payment_client_module
 from wstore.ordering.errors import OrderingError
-from wstore.ordering.models import Payment
 from wstore.store_commons.utils.testing import decorator_mock
 
 
 def mock_payment_client(self, module):
     # Mock payment client
-    module.importlib = MagicMock()
-    module_mock = MagicMock()
-    self._payment_class = MagicMock()
-    module_mock.PaymentClient = self._payment_class
+    payment_client_class_mock = MagicMock()
+    self._payment_class = MagicMock(name="PaymentClass", __name__="PaymentClass")
+    self._payment_inst = MagicMock(name="PaymentInstance", __name__="PaymentInstance")
+    module.PaymentClient = payment_client_class_mock
 
-    self._payment_inst = MagicMock()
     self._payment_class.return_value = self._payment_inst
-    module.importlib.import_module.return_value = module_mock
+    payment_client_class_mock.get_payment_client_class.return_value = self._payment_class
 
 
 INVOICE_PATH = "/media/invoice/invoice1.pdf"
@@ -810,9 +809,6 @@ class ChargingEngineTestCase(TestCase):
         self.assertEquals(self._paypal_url, redirect_url)
 
         # Check payment client loading call
-        charging_engine.importlib.import_module.assert_called_once_with(
-            "wstore.charging_engine.payment_client.payment_client"
-        )
         self._payment_class.assert_called_once_with(self._order)
         self._payment_inst.start_redirection_payment.assert_called_once_with(transactions)
 
@@ -1235,30 +1231,28 @@ class ChargingEngineTestCase(TestCase):
         self.assertEquals("Invalid charge type, must be `initial`, `recurring`, or `usage`", str(error))
 
 
-BASIC_PAYPAL = {
-    "reference": "111111111111111111111111",
-    "payerId": "payer",
-    "paymentId": "payment",
-}
+PAYPAL_DATA_BASE = {"action": "confirm", "confirm_action": "accept", "client": "paypal"}
 
-MISSING_REF = {"payerId": "payer", "paymentId": "payment"}
+BASIC_PAYPAL = {**PAYPAL_DATA_BASE, "reference": "111111111111111111111111", "payerID": "payer", "paymentId": "payment"}
 
-MISSING_PAYER = {"reference": "111111111111111111111111", "paymentId": "payment"}
+MISSING_REF = {**PAYPAL_DATA_BASE, "payerID": "payer", "paymentId": "payment"}
 
-MISSING_PAYMENT = {"reference": "111111111111111111111111", "payerId": "payer"}
+MISSING_PAYER = {**PAYPAL_DATA_BASE, "reference": "111111111111111111111111", "paymentId": "payment"}
+
+MISSING_PAYMENT = {**PAYPAL_DATA_BASE, "reference": "111111111111111111111111", "payerID": "payer"}
 
 MISSING_RESP = {
     "result": "error",
-    "error": "The payment has been canceled: Missing required field. It must contain reference, paymentId, and payerId",
+    "error": "Invalid request: Missing required field. It must contain ['paymentId', 'payerID', 'reference'] field(s).",
 }
 
 LOCK_CLOSED_RESP = {
     "result": "error",
-    "error": "The payment has been canceled: PaymentError: The timeout set to process the payment has finished",
+    "error": "The payment has timed out: PaymentTimeoutError: The timeout set to process the payment has finished",
 }
 
 
-class PayPalConfirmationTestCase(TestCase):
+class PaymentConfirmationTestCase(TestCase):
     tags = ("ordering", "paypal-conf")
 
     def setUp(self):
@@ -1307,7 +1301,8 @@ class PayPalConfirmationTestCase(TestCase):
 
         self._order_inst.pending_payment = self._payment
 
-        views.Order.objects.filter.return_value = [self._order_inst]
+        order_filter_mock = MagicMock(**{"first.return_value": self._order_inst})
+        views.Order.objects.filter.return_value = order_filter_mock
         views.Order.objects.get.return_value = self._order_inst
 
         offering_mock = MagicMock()
@@ -1322,20 +1317,24 @@ class PayPalConfirmationTestCase(TestCase):
 
         # Mock payment client
         mock_payment_client(self, views)
+        self._payment_class.END_PAYMENT_PARAMS = ("paymentId", "payerID")
 
         # Mock Charging engine
         views.ChargingEngine = MagicMock()
         self._charging_inst = MagicMock()
         views.ChargingEngine.return_value = self._charging_inst
 
-        views.settings.PAYMENT_CLIENT = "wstore.charging_engine.payment_client.payment_client.PaymentClient"
+        payment_client_module.settings.PAYMENT_CLIENT = (
+            "wstore.charging_engine.payment_client.payment_client.PaymentClient"
+        )
 
     def tearDown(self):
         reload(wstore.store_commons.utils.http)
         reload(views)
 
     def _invalid_ref(self):
-        views.Order.objects.filter.return_value = []
+        order_filter_mock = MagicMock(**{"first.return_value": None})
+        views.Order.objects.filter.return_value = order_filter_mock
 
     def _lock_closed(self):
         self._connection_inst.wstore_order.find_one_and_update.return_value = {"_lock": True}
@@ -1386,7 +1385,7 @@ class PayPalConfirmationTestCase(TestCase):
                 BASIC_PAYPAL,
                 {
                     "result": "error",
-                    "error": "The payment has been canceled: The provided reference does not identify a valid order",
+                    "error": "Invalid request: The provided reference does not identify a valid order",
                 },
                 None,
                 _invalid_ref,
@@ -1419,7 +1418,7 @@ class PayPalConfirmationTestCase(TestCase):
                 BASIC_PAYPAL,
                 {
                     "result": "error",
-                    "error": "The payment has been canceled due to an unexpected error",
+                    "error": "The payment has been canceled due to an unexpected error.",
                 },
                 None,
                 _exception,
@@ -1443,7 +1442,7 @@ class PayPalConfirmationTestCase(TestCase):
 
         # Create request
         request = self.factory.post(
-            "charging/api/orderManagement/orders/accept/",
+            "charging/api/orderManagement/orders/confirm/",
             json.dumps(data),
             content_type="application/json",
             HTTP_ACCEPT="application/json",
@@ -1451,7 +1450,8 @@ class PayPalConfirmationTestCase(TestCase):
         request.user = self.user
 
         # Build class
-        paypal_view = views.PayPalConfirmation(permitted_methods=("POST",))
+        # __import__("ipdb").sset_trace()
+        paypal_view = views.PaymentConfirmation(permitted_methods=("POST",))
 
         response = paypal_view.create(request)
 
@@ -1479,10 +1479,9 @@ class PayPalConfirmationTestCase(TestCase):
             )
 
             views.Order.objects.filter.assert_called_once_with(pk=ObjectId("111111111111111111111111"))
-            views.Order.objects.get.assert_called_once_with(pk=ObjectId("111111111111111111111111"))
 
             self._payment_class.assert_called_once_with(self._order_inst)
-            self._payment_inst.end_redirection_payment.assert_called_once_with("payment", "payer")
+            self._payment_inst.end_redirection_payment.assert_called_once_with(**data)
 
             views.ChargingEngine.assert_called_once_with(self._order_inst)
             self._charging_inst.end_charging.assert_called_once_with(
@@ -1547,7 +1546,7 @@ MANAGER_DENIED_RESP = {"result": "error", "error": "Permission denied"}
 MANAGER_VALUE_RESP = {"result": "error", "error": "Value error"}
 
 
-class PayPalRefundTestCase(TestCase):
+class PaymentRefundTestCase(TestCase):
     tags = ("ordering", "refund")
 
     def setUp(self):
@@ -1577,7 +1576,9 @@ class PayPalRefundTestCase(TestCase):
         # Mock payment client
         mock_payment_client(self, views)
 
-        views.settings.PAYMENT_CLIENT = "wstore.charging_engine.payment_client.payment_client.PaymentClient"
+        payment_client_module.settings.PAYMENT_CLIENT = (
+            "wstore.charging_engine.payment_client.payment_client.PaymentClient"
+        )
 
     def tearDown(self):
         reload(wstore.store_commons.utils.http)
@@ -1667,7 +1668,7 @@ class PayPalRefundTestCase(TestCase):
         request.user = self.user
 
         # Build class
-        paypal_view = views.PayPalRefund(permitted_methods=("POST",))
+        paypal_view = views.PaymentRefund(permitted_methods=("POST",))
         response = paypal_view.create(request)
 
         # Check response

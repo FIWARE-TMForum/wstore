@@ -19,18 +19,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import importlib
 import json
 from copy import deepcopy
 from logging import getLogger
+from requests.exceptions import HTTPError
 
 from bson import ObjectId
-from django.conf import settings
 
 from wstore.asset_manager.resource_plugins.decorators import on_product_acquired
 from wstore.charging_engine.charging.cdr_manager import CDRManager
 from wstore.charging_engine.charging_engine import ChargingEngine
-from wstore.ordering.errors import PaymentError
+from wstore.charging_engine.payment_client.payment_client import PaymentClient, PaymentClientError
+from wstore.ordering.errors import PaymentError, PaymentTimeoutError
 from wstore.ordering.inventory_client import InventoryClient
 from wstore.ordering.models import Offering, Order
 from wstore.ordering.ordering_client import OrderingClient
@@ -38,8 +38,10 @@ from wstore.store_commons.database import get_database_connection
 from wstore.store_commons.resource import Resource
 from wstore.store_commons.utils.http import authentication_required, build_response, supported_request_mime_types
 
+logger = getLogger("wstore.default_logger")
 
-class PayPalConfirmation(Resource):
+
+class PaymentConfirmation(Resource):
     def _set_initial_states(self, transactions, raw_order, order):
         def is_digital_contract(contract):
             off = Offering.objects.get(pk=ObjectId(contract.offering))
@@ -74,97 +76,104 @@ class PayPalConfirmation(Resource):
             except:
                 pass
 
-    # This method is used to receive the PayPal confirmation
-    # when the customer is paying using his PayPal account
-    @supported_request_mime_types(("application/json",))
-    @authentication_required
-    def create(self, request):
-        order = None
-        concept = None
-        self.ordering_client = OrderingClient()
-        try:
-            # Extract payment information
-            data = json.loads(request.body)
+    def _get_raw_order(self, order):
+        raw_order = self.ordering_client.get_order(order.order_id)
 
-            if "reference" not in data or "paymentId" not in data or "payerId" not in data:
-                raise ValueError("Missing required field. It must contain reference, paymentId, and payerId")
+        if raw_order is None:
+            raise ValueError(f"No raw order found for order: {order.order_id}")
 
-            reference = data["reference"]
-            token = data["paymentId"]
-            payer_id = data["payerId"]
+        return raw_order
 
-            if not Order.objects.filter(pk=ObjectId(reference)):
-                raise ValueError("The provided reference does not identify a valid order")
+    def _set_order_failed(self, order, raw_order):
+        """Sets an order as failed when the payment acceptance process fails."""
 
-            db = get_database_connection()
+        logger.info(f"Order {order.order_id} failed payment confirmation.")
 
-            # Uses an atomic operation to get and set the _lock value in the purchase
-            # document
-            pre_value = db.wstore_order.find_one_and_update({"_id": ObjectId(reference)}, {"$set": {"_lock": True}})
-
-            # If the value of _lock before setting it to true was true, means
-            # that the time out function has acquired it previously so the
-            # view ends
-            if not pre_value or "_lock" in pre_value and pre_value["_lock"]:
-                raise PaymentError("The timeout set to process the payment has finished")
-
-            order = Order.objects.get(pk=ObjectId(reference))
-            raw_order = self.ordering_client.get_order(order.order_id)
-            pending_info = order.pending_payment
-            concept = pending_info["concept"]
-
-            # If the order state value is different from pending means that
-            # the timeout function has completely ended before acquiring the resource
-            # so _lock is set to false and the view ends
-            if pre_value["state"] != "pending":
-                db.wstore_order.find_one_and_update({"_id": ObjectId(reference)}, {"$set": {"_lock": False}})
-                raise PaymentError("The timeout set to process the payment has finished")
-
-            # Check that the request user is authorized to end the payment
-            if (
-                request.user.userprofile.current_organization != order.owner_organization
-                or request.user != order.customer
-            ):
-                raise PaymentError("You are not authorized to execute the payment")
-
-            transactions = pending_info["transactions"]
-
-            # Get the payment client
-            # Load payment client
-            cln_str = settings.PAYMENT_CLIENT
-            client_package, client_class = cln_str.rsplit(".", 1)
-
-            payment_client = getattr(importlib.import_module(client_package), client_class)
-
-            # build the payment client
-            client = payment_client(order)
-            order.sales_ids = client.end_redirection_payment(token, payer_id)
+        if order.pending_payment["concept"] == "initial":
+            # Set the order to failed in the ordering API
+            # Set all items as Failed, mark the whole order as failed
+            self.ordering_client.update_items_state(raw_order, "Failed")
+            order.delete()
+        else:
+            order.state = "paid"
+            order.pending_payment = None
             order.save()
 
-            charging_engine = ChargingEngine(order)
-            charging_engine.end_charging(transactions, pending_info["free_contracts"], concept)
+    def _check_confirmation_request(self, request_data, payment_client):
+        """Checks if the request data is valid an returns the action, the order reference and object.
 
-        except Exception as e:
-            # Rollback the purchase if existing
-            if order is not None and raw_order is not None:
-                if concept == "initial":
-                    # Set the order to failed in the ordering API
-                    # Set all items as Failed, mark the whole order as failed
-                    self.ordering_client.update_items_state(raw_order, "Failed")
-                    order.delete()
-                else:
-                    order.state = "paid"
-                    order.pending_payment = None
-                    order.save()
+        Args:
+            request_data (dict): The parsed json data of the request
+            payment_client (PaymentClient): A payment_client object instance
+        """
 
-            expl = " due to an unexpected error"
-            err_code = 500
-            if isinstance(e, PaymentError) or isinstance(e, ValueError):
-                expl = ": " + str(e)
-                err_code = 403
+        if "confirm_action" not in request_data or request_data["confirm_action"] not in ("accept", "cancel"):
+            raise ValueError("No valid action provided.")
 
-            msg = "The payment has been canceled" + expl
-            return build_response(request, err_code, msg)
+        if "reference" not in request_data or not all(
+            param in request_data for param in payment_client.END_PAYMENT_PARAMS
+        ):
+            raise ValueError(
+                f"Missing required field. It must contain {[*payment_client.END_PAYMENT_PARAMS, 'reference']} field(s)."
+            )
+
+        confirm_action = request_data["confirm_action"]
+        reference = request_data["reference"]
+        order = Order.objects.filter(pk=ObjectId(reference)).first()
+
+        if not order:
+            raise ValueError("The provided reference does not identify a valid order")
+
+        logger.debug(f"Payment confirmation request for order {order.order_id} OK")
+        return confirm_action, reference, order
+
+    def _accept_confirmation_request(
+        self, reference, order, raw_order, request_user, payment_client, payment_confirmation_data
+    ):
+        """Handler for 'accept' requests
+
+        Args:
+            reference (str): The order reference number.
+            order (Order): The order object whose payment is confirmed.
+            request_user: The request.user object.
+            payment_client (PaymentClient): The PaymentClient object to use
+            payment_confirmation_data (dict): The data passed by the payment client.
+        """
+        db = get_database_connection()
+
+        # Uses an atomic operation to get and set the _lock value in the purchase
+        # document
+        pre_value = db.wstore_order.find_one_and_update({"_id": ObjectId(reference)}, {"$set": {"_lock": True}})
+
+        # If the value of _lock before setting it to true was true, means
+        # that the time out function has acquired it previously so the
+        # view ends
+        if not pre_value or "_lock" in pre_value and pre_value["_lock"]:
+            raise PaymentTimeoutError("The timeout set to process the payment has finished")
+
+        pending_info = order.pending_payment
+        concept = pending_info["concept"]
+
+        # If the order state value is different from pending means that
+        # the timeout function has completely ended before acquiring the resource
+        # so _lock is set to false and the view ends
+        if pre_value["state"] != "pending":
+            db.wstore_order.find_one_and_update({"_id": ObjectId(reference)}, {"$set": {"_lock": False}})
+            raise PaymentTimeoutError("The timeout set to process the payment has finished")
+
+        # Check that the request user is authorized to end the payment
+        if request_user.userprofile.current_organization != order.owner_organization or request_user != order.customer:
+            raise PaymentError("You are not authorized to execute the payment")
+
+        transactions = pending_info["transactions"]
+
+        # build the payment client
+        client = payment_client(order)
+        order.sales_ids = client.end_redirection_payment(**payment_confirmation_data)
+        order.save()
+
+        charging_engine = ChargingEngine(order)
+        charging_engine.end_charging(transactions, pending_info["free_contracts"], concept)
 
         # Change states of TMForum resources (orderItems, products, etc)
         # depending on the concept of the payment
@@ -183,37 +192,76 @@ class PayPalConfirmation(Resource):
         # _lock is set to false
         db.wstore_order.find_one_and_update({"_id": ObjectId(reference)}, {"$set": {"_lock": False}})
 
-        return build_response(request, 200, "Ok")
+        logger.debug(f"Payment accepted for order {order.order_id}.")
+        return 200, "Ok"
 
+    def _cancel_confirmation_request(self, order, raw_order):
+        """Handler for 'cancel' requests
 
-class PayPalCancellation(Resource):
-    # This method is used when the user cancel a charge
-    # when is using a PayPal account
-    @supported_request_mime_types(("application/json",))
-    @authentication_required
+        Args:
+            order (Order): The order object whose payment is confirmed
+        """
+        # Set the order to failed in the ordering API
+        # Set all items as Failed, mark the whole order as Failed
+        # client.update_state(raw_order, 'Failed')
+        self.ordering_client.update_items_state(raw_order, "Failed")
+        order.delete()
+
+        logger.debug(f"Payment candelled for order {order.order_id}.")
+        return 200, "Ok"
+
+    # This method is used to receive the payment (Paypal, Stripe, ..) confirmation
+    # when the customer is paying using his PayPal account
+    # @supported_request_mime_types(("application/json",))
+    # @authentication_required
     def create(self, request):
-        # In case the user cancels the payment is necessary to update
-        # the database in order to avoid an inconsistent state
+        order = None
+        self.ordering_client = OrderingClient()
         try:
+            # Extract payment information
             data = json.loads(request.body)
-            order = Order.objects.get(pk=data["reference"])
 
-            client = OrderingClient()
-            raw_order = client.get_order(order.order_id)
+            payment_client = PaymentClient.get_payment_client_class()
 
-            # Set the order to failed in the ordering API
-            # Set all items as Failed, mark the whole order as Failed
-            # client.update_state(raw_order, 'Failed')
-            client.update_items_state(raw_order, "Failed")
+            confirm_action, reference, order = self._check_confirmation_request(data, payment_client)
+            raw_order = self.ordering_client.get_order(order.order_id)
 
-            order.delete()
-        except:
-            return build_response(request, 400, "Invalid request")
+            if confirm_action == "accept":
+                response = self._accept_confirmation_request(
+                    reference, order, raw_order, request.user, payment_client, data
+                )
+            else:
+                response = self._cancel_confirmation_request(order, raw_order)
 
-        return build_response(request, 200, "Ok")
+        # Error in request (check failed)
+        except ValueError as e:
+            response = 400, f"Invalid request: {str(e)}"
+        # Error getting raw_order
+        except HTTPError as e:
+            response = 400, f"Invalid request: {str(e)}"
+        except PaymentClientError as e:
+            self._set_order_failed(order, raw_order)
+            response = 503, f"Error with payment service provider: {str(e)}"
+        # Error while accepting payment, timed out.
+        except PaymentTimeoutError as e:
+            # order and raw order are guaranteed to be defined here.
+            self._set_order_failed(order, raw_order)
+            response = 403, f"The payment has timed out: {str(e)}"
+        # Error while accepting payment, usually no permissions.
+        except PaymentError as e:
+            # order and raw order are guaranteed to be defined here.
+            self._set_order_failed(order, raw_order)
+            response = 403, f"The payment has been canceled: {str(e)}"
+        # Server error, catches everything.
+        except Exception:
+            # order and raw order are guaranteed to be defined here.
+            self._set_order_failed(order, raw_order)
+            response = 500, "The payment has been canceled due to an unexpected error."
+
+        return build_response(request, *response)
 
 
-class PayPalRefund(Resource):
+class PaymentRefund(Resource):
     # This method is used when the user cancel a charge
     # when is using a PayPal account
     @supported_request_mime_types(("application/json",))
@@ -225,12 +273,7 @@ class PayPalRefund(Resource):
             data = json.loads(request.body)
             order = Order.objects.get(order_id=data["orderId"])
 
-            # Get the payment client
-            # Load payment client
-            cln_str = settings.PAYMENT_CLIENT
-            client_package, client_class = cln_str.rsplit(".", 1)
-
-            payment_client = getattr(importlib.import_module(client_package), client_class)
+            payment_client = PaymentClient.get_payment_client_class()
 
             # build the payment client
             client = payment_client(order)

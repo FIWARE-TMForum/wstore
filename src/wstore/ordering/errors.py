@@ -27,6 +27,14 @@ class OrderingError(Exception):
         return "OrderingError: " + self.value
 
 
+class PaymentTimeoutError(Exception):
+    def __init__(self, msg):
+        self.value = msg
+
+    def __str__(self):
+        return "PaymentTimeoutError: " + self.value
+
+
 class PaymentError(Exception):
     def __init__(self, msg):
         self.value = msg
