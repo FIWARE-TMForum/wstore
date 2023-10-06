@@ -35,6 +35,7 @@ from wstore.charging_engine.charging.billing_client import BillingClient
 from wstore.charging_engine.charging.cdr_manager import CDRManager
 from wstore.charging_engine.invoice_builder import InvoiceBuilder
 from wstore.charging_engine.price_resolver import PriceResolver
+from wstore.charging_engine.payment_client.payment_client import PaymentClient
 from wstore.ordering.errors import OrderingError
 from wstore.ordering.models import Charge, Offering, Order, Payment
 from wstore.ordering.ordering_client import OrderingClient
@@ -103,10 +104,7 @@ class ChargingEngine:
         logger.info("Starting charging process")
 
         # Load payment client
-        cln_str = settings.PAYMENT_CLIENT
-        client_package, client_class = cln_str.rsplit(".", 1)
-
-        payment_client = getattr(importlib.import_module(client_package), client_class)
+        payment_client = PaymentClient.get_payment_client_class()
 
         # build the payment client
         client = payment_client(self._order)
@@ -117,7 +115,7 @@ class ChargingEngine:
         # Set timeout for PayPal transaction to 5 minutes
         t = threading.Timer(300, self._timeout_handler)
         t.start()
-        logger.debug("Timer for Paypal transaction started")
+        logger.debug(f"Timer for {payment_client.__name__} transaction started")
 
         return checkout_url
 
@@ -364,6 +362,7 @@ class ChargingEngine:
                 free_contracts.append(contract)
 
         if len(transactions):
+            logger.debug(f"Appended a total of {len(transactions)} transactions to order {self._order.order_id}")
             # Make the charge
             redirect_url = self._charge_client(transactions)
             self._save_pending_charge(transactions, free_contracts=free_contracts)

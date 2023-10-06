@@ -44,6 +44,8 @@ MODE = "sandbox"  # sandbox or live
 
 
 class PayPalClient(PaymentClient):
+    NAME = "paypal"
+    END_PAYMENT_PARAMS = ("paymentId", "payerID")
     _purchase = None
     _checkout_url = None
 
@@ -64,8 +66,9 @@ class PayPalClient(PaymentClient):
         if url[-1] != "/":
             url += "/"
 
-        return_url = url + "payment?action=accept&ref=" + str(self._order.pk)
-        cancel_url = url + "payment?action=cancel&ref=" + str(self._order.pk)
+        url += "payment?client=paypal"
+        return_url = url + "&action=accept&ref=" + str(self._order.pk)
+        cancel_url = url + "&action=cancel&ref=" + str(self._order.pk)
 
         if not self._order.owner_organization.private:
             # The request has been made on behalf an organization
@@ -129,15 +132,17 @@ class PayPalClient(PaymentClient):
 
         # Extract URL where redirecting the customer
         response = payment.to_dict()
-        for l in response["links"]:
-            if l["rel"] == "approval_url":
-                self._checkout_url = l["href"]
+        for link in response["links"]:
+            if link["rel"] == "approval_url":
+                self._checkout_url = link["href"]
                 break
 
     def direct_payment(self, currency, price, credit_card):
         pass
 
-    def end_redirection_payment(self, token, payer_id):
+    def end_redirection_payment(self, **kwargs):
+        token = kwargs["token"]
+        payer_id = kwargs["payer_id"]
         payment = paypalrestsdk.Payment.find(token)
 
         if not payment.execute({"payer_id": payer_id}):

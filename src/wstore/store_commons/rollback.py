@@ -87,7 +87,7 @@ def rollback(post_action=None):
                     _remove_model(model)
 
                 if post_action is not None:
-                    logger.debug(f"Running post_action hook for rollback")
+                    logger.debug("Running post_action hook for rollback")
                     post_action(self)
 
                 raise e

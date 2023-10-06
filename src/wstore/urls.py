@@ -80,16 +80,12 @@ urlpatterns = [
         ordering_views.OrderingCollection(permitted_methods=("POST",)),
     ),
     url(
-        r"^charging/api/orderManagement/orders/accept/?$",
-        charging_views.PayPalConfirmation(permitted_methods=("POST",)),
-    ),
-    url(
-        r"^charging/api/orderManagement/orders/cancel/?$",
-        charging_views.PayPalCancellation(permitted_methods=("POST",)),
+        r"^charging/api/orderManagement/orders/confirm/?$",
+        charging_views.PaymentConfirmation(permitted_methods=("POST",)),
     ),
     url(
         r"^charging/api/orderManagement/orders/refund/?$",
-        charging_views.PayPalRefund(permitted_methods=("POST",)),
+        charging_views.PaymentRefund(permitted_methods=("POST",)),
     ),
     url(
         r"^charging/api/orderManagement/products/?$",

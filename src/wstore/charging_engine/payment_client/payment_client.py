@@ -18,17 +18,28 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from django.conf import settings
+from importlib import import_module
+
 
 class PaymentClient:
+    NAME = "default"
+    END_PAYMENT_PARAMS = []
     _purchase = None
+
+    @staticmethod
+    def get_payment_client_class():
+        cln_str = settings.PAYMENT_CLIENT
+        client_package, client_class = cln_str.rsplit(".", 1)
+        return getattr(import_module(client_package), client_class)
 
     def __init__(self, purchase):
         self._purchase = purchase
 
-    def start_redirection_payment(self, price, currency):
+    def start_redirection_payment(self, transactions):
         pass
 
-    def end_redirection_payment(self, token, payer_id):
+    def end_redirection_payment(self, **kwargs):
         pass
 
     def direct_payment(self, currency, price, credit_card):
@@ -39,3 +50,17 @@ class PaymentClient:
 
     def get_checkout_url(self):
         pass
+
+
+class PaymentClientError(Exception):
+    """
+    An error to raise when a request to the payment client fails or there's an
+    unexpeced error outside the marketplaces control.
+    """
+
+    def __init__(self, client, msg):
+        self.client = client
+        self.value = msg
+
+    def __str__(self):
+        return f"PaymentClientError: An error has ocurred with {self.client}. Operation cannot be completed. {self.msg}"

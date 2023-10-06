@@ -187,8 +187,8 @@ ROOT_URLCONF = "urls"
 WSGI_APPLICATION = "wsgi.application"
 
 # Payment method determines the payment gateway to be used
-# Allowed values: paypal (default), fipay, None
-PAYMENT_METHOD = "paypal"
+# Allowed values: paypal (default), stripe, None
+PAYMENT_METHOD = "stripe"
 
 AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend",)
 
@@ -203,7 +203,7 @@ CRONJOBS = [
 
 CLIENTS = {
     "paypal": "wstore.charging_engine.payment_client.paypal_client.PayPalClient",
-    "fipay": "wstore.charging_engine.payment_client.fipay_client.FiPayClient",
+    "stripe": "wstore.charging_engine.payment_client.stripe_client.StripeClient",
     None: "wstore.charging_engine.payment_client.payment_client.PaymentClient",
 }
 
