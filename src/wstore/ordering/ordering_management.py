@@ -202,8 +202,6 @@ class OrderingManager:
         return price
 
     def _build_contract(self, item):
-        # TODO: Check that the ordering API is actually validating that the chosen pricing and characteristics are valid for the given product
-
         # Build offering
         offering, offering_info = self._get_offering(item)
 
@@ -253,12 +251,12 @@ class OrderingManager:
                     )
 
         # Calculate the revenue sharing class
-        revenue_class = offering_info["serviceCandidate"]["id"]
+        # revenue_class = offering_info["serviceCandidate"]["id"]
 
         return Contract(
             item_id=item["id"],
             pricing_model=pricing,
-            revenue_class=revenue_class,
+            #revenue_class=revenue_class,
             offering=offering.pk,
         )
 
@@ -307,12 +305,21 @@ class OrderingManager:
 
         postal_address = postal_addresses[0]["medium"]
 
+        # return {
+        #     "street": postal_address["streetOne"] + "\n" + postal_address.get("streetTwo", ""),
+        #     "postal": postal_address["postcode"],
+        #     "city": postal_address["city"],
+        #     "province": postal_address["stateOrProvince"],
+        #     "country": postal_address["country"],
+        # }
+
+        # TODO: Add billing address
         return {
-            "street": postal_address["streetOne"] + "\n" + postal_address.get("streetTwo", ""),
-            "postal": postal_address["postcode"],
-            "city": postal_address["city"],
-            "province": postal_address["stateOrProvince"],
-            "country": postal_address["country"],
+            "street": "",
+            "postal": "",
+            "city": "",
+            "province": "",
+            "country": "",
         }
 
     def _process_add_items(self, items, order_id, description, terms_accepted):
@@ -444,7 +451,7 @@ class OrderingManager:
 
         # Classify order items by action
         items = {"add": [], "modify": [], "delete": [], "no_change": []}
-        for item in order["orderItem"]:
+        for item in order["productOrderItem"]:
             items[item["action"].lower()].append(item)
 
         if len(items["add"]) and len(items["modify"]):

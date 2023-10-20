@@ -57,19 +57,18 @@ class OrderingCollection(Resource):
             return build_response(request, 400, "The provided data is not a valid JSON object")
 
         client = OrderingClient()
-        client.update_state(order, "InProgress")
+        client.update_state(order, "inProgress")
 
         terms_accepted = request.META.get("HTTP_X_TERMS_ACCEPTED", "").lower() == "true"
 
         try:
-            # Check that the user has a billing address
             response = None
 
             om = OrderingManager()
             redirect_url = om.process_order(user, order, terms_accepted=terms_accepted)
 
             if redirect_url is not None:
-                client.update_state(order, "Pending")
+                client.update_state(order, "pending")
 
                 response = HttpResponse(
                     json.dumps({"redirectUrl": redirect_url}),
@@ -82,23 +81,23 @@ class OrderingCollection(Resource):
                 digital_items = []
                 order_model = Order.objects.get(order_id=order["id"])
 
-                for item in order["orderItem"]:
+                for item in order["productOrderItem"]:
                     contract = order_model.get_item_contract(item["id"])
                     offering = Offering.objects.get(pk=ObjectId(contract.offering))
 
                     if offering.is_digital:
                         digital_items.append(item)
 
-                client.update_items_state(order, "Completed", digital_items)
+                client.update_items_state(order, "completed", digital_items)
 
                 response = build_response(request, 200, "OK")
 
         except OrderingError as e:
             response = build_response(request, 400, str(e.value))
-            client.update_items_state(order, "Failed")
+            client.update_items_state(order, "failed")
         except Exception as e:
             response = build_response(request, 500, "Your order could not be processed")
-            client.update_items_state(order, "Failed")
+            client.update_items_state(order, "failed")
 
         return response
 
