@@ -76,7 +76,6 @@ class OrderingClient:
         url = urljoin(self._ordering_api, path)
 
         r = requests.patch(url, json=patch)
-
         r.raise_for_status()
 
     def update_items_state(self, order, state, items=None):
@@ -87,6 +86,8 @@ class OrderingClient:
         :param state: New state
         :return:
         """
+
+        self.update_state(order, state)
 
         # Build patch body
         patch = {
@@ -108,5 +109,4 @@ class OrderingClient:
         url = urljoin(self._ordering_api, path)
 
         r = requests.patch(url, json=patch)
-
         r.raise_for_status()

@@ -57,18 +57,17 @@ class OrderingCollection(Resource):
             return build_response(request, 400, "The provided data is not a valid JSON object")
 
         client = OrderingClient()
-        client.update_state(order, "inProgress")
+        client.update_items_state(order, "inProgress")
 
         terms_accepted = request.META.get("HTTP_X_TERMS_ACCEPTED", "").lower() == "true"
 
         try:
             response = None
-
             om = OrderingManager()
             redirect_url = om.process_order(user, order, terms_accepted=terms_accepted)
 
             if redirect_url is not None:
-                client.update_state(order, "pending")
+                client.update_items_state(order, "pending")
 
                 response = HttpResponse(
                     json.dumps({"redirectUrl": redirect_url}),
