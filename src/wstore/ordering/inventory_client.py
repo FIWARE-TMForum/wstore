@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2016 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2016 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2023 Future Internet Consulting and Development Solutions S.L.
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -109,7 +110,7 @@ class InventoryClient:
         :param product_id: Id of the product to be activated
         """
         patch_body = {
-            "status": "Active",
+            "status": "active",
             "startDate": datetime.utcnow().isoformat() + "Z",
         }
         self.patch_product(product_id, patch_body)
@@ -119,7 +120,7 @@ class InventoryClient:
         Suspends a given product by changing its state to Suspended
         :param product_id: Id of the product to be suspended
         """
-        patch_body = {"status": "Suspended"}
+        patch_body = {"status": "suspended"}
         self.patch_product(product_id, patch_body)
 
     def terminate_product(self, product_id):
@@ -135,7 +136,15 @@ class InventoryClient:
             pass
 
         patch_body = {
-            "status": "Terminated",
+            "status": "terminated",
             "terminationDate": datetime.utcnow().isoformat() + "Z",
         }
         self.patch_product(product_id, patch_body)
+
+    def create_product(self, product):
+        url = self._inventory_api + "/product/"
+
+        r = requests.post(url, json=product)
+        r.raise_for_status()
+
+        return r.json()

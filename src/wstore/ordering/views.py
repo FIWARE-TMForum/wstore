@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2015 CoNWeT Lab., Universidad Politécnica de Madrid
 # Copyright (c) 2021 Future Internet Consulting and Development Solutions S.L.
 
 # This file belongs to the business-charging-backend
@@ -24,6 +24,7 @@ import json
 
 from bson.objectid import ObjectId
 from django.http import HttpResponse
+from logging import getLogger
 
 from wstore.asset_manager.resource_plugins.decorators import (
     on_product_acquired,
@@ -40,6 +41,7 @@ from wstore.ordering.ordering_management import OrderingManager
 from wstore.store_commons.resource import Resource
 from wstore.store_commons.utils.http import authentication_required, build_response, supported_request_mime_types
 
+logger = getLogger("wstore.default_logger")
 
 class OrderingCollection(Resource):
     @authentication_required
@@ -88,6 +90,12 @@ class OrderingCollection(Resource):
                         digital_items.append(item)
 
                 client.update_items_state(order, "completed", digital_items)
+
+                try:
+                    om.notify_completed(order)
+                except:
+                    # The order is correct so we cannot set is as failed
+                    logger.error("The products for order {} could not be created".format(order["id"]))
 
                 response = build_response(request, 200, "OK")
 

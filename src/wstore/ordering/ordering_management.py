@@ -476,3 +476,15 @@ class OrderingManager:
             redirection_url = self._process_add_items(items["add"], order["id"], description, terms_accepted)
 
         return redirection_url
+
+    def notify_completed(self, order):
+        # Process product order items to instantiate the inventory
+        for orderItem in order["productOrderItem"]:
+            product = orderItem["product"]
+
+            product["name"] = "oid={}".format(order["id"])
+            product["status"] = "created"
+            product["productOffering"] = orderItem["productOffering"]
+
+            inventory_client = InventoryClient()
+            inventory_client.create_product(product)
