@@ -38,7 +38,7 @@ class InventoryClient:
         return urljoin(site, "charging/api/orderManagement/products")
 
     def get_hubs(self):
-        r = requests.get(self._inventory_api + "/api/productInventory/v2/hub")
+        r = requests.get(self._inventory_api + "/hub")
         r.raise_for_status()
         return r.json()
 
@@ -55,7 +55,7 @@ class InventoryClient:
         else:
             callback = {"callback": callback_url}
 
-            r = requests.post(self._inventory_api + "/api/productInventory/v2/hub", json=callback)
+            r = requests.post(self._inventory_api + "/hub", json=callback)
 
             if r.status_code != 201 and r.status_code != 409:
                 msg = "It hasn't been possible to create inventory subscription, "
@@ -64,7 +64,7 @@ class InventoryClient:
                 raise ImproperlyConfigured(msg)
 
     def get_product(self, product_id):
-        url = self._inventory_api + "/api/productInventory/v2/product/" + str(product_id)
+        url = self._inventory_api + "/product/" + str(product_id)
 
         r = requests.get(url)
         r.raise_for_status()
@@ -82,7 +82,7 @@ class InventoryClient:
         for k, v in query.items():
             qs += "{}={}&".format(k, v)
 
-        url = self._inventory_api + "/api/productInventory/v2/product" + qs[:-1]
+        url = self._inventory_api + "/product" + qs[:-1]
 
         r = requests.get(url)
         r.raise_for_status()
@@ -96,7 +96,7 @@ class InventoryClient:
         :param patch_body: New values for the product fields to be patched
         """
         # Build product url
-        url = self._inventory_api + "/api/productInventory/v2/product/" + str(product_id)
+        url = self._inventory_api + "/product/" + str(product_id)
 
         r = requests.patch(url, json=patch_body)
         r.raise_for_status()
