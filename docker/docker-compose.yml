@@ -1,7 +1,7 @@
 version: '3'
 services:
     charging_mongo:
-        image: mongo:4.4
+        image: mongo:6.0
         ports:
             - 27018:27017
         volumes:
@@ -57,12 +57,11 @@ services:
           - BAE_CB_LOCAL_SITE=http://charging.docker:8006/  # Local URL of the charging backend
 
           # ----- APIs Conection config -----
-          - BAE_CB_CATALOG=http://apis.docker:8080/DSProductCatalog
-          - BAE_CB_INVENTORY=http://apis.docker:8080/DSProductInventory
-          - BAE_CB_ORDERING=http://apis.docker:8080/DSProductOrdering
-          - BAE_CB_BILLING=http://apis.docker:8080/DSBillingManagement
-          - BAE_CB_RSS=http://rss.docker:8080/DSRevenueSharing
-          - BAE_CB_USAGE=http://apis.docker:8080/DSUsageManagement
+          - BAE_CB_CATALOG=http://host.docker.internal:8632
+          - BAE_CB_INVENTORY=http://host.docker.internal:8635
+          - BAE_CB_ORDERING=http://host.docker.internal:8634
+          - BAE_CB_BILLING=http://host.docker.internal:8636
+          - BAE_CB_USAGE=http://host.docker.internal:8637
           - BAE_CB_AUTHORIZE_SERVICE=http://proxy.docker:8004/authorizeService/apiKeys
 
           # Whether to expect the user access token to be included in the requests

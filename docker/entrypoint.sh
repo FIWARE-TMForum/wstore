@@ -29,17 +29,6 @@ function test_connection {
     echo "$1 connection, OK"
 }
 
-# Check that the settings files have been included
-if [ ! -f /opt/business-ecosystem-charging-backend/src/settings.py ]; then
-    echo "Missing settings.py file"
-    exit 1
-fi
-
-if [ ! -f /opt/business-ecosystem-charging-backend/src/services_settings.py ]; then
-    echo "Missing services_settings.py file"
-    exit 1
-fi
-
 if [ ! -f /opt/business-ecosystem-charging-backend/src/__init__.py ]; then
     touch /opt/business-ecosystem-charging-backend/src/__init__.py
 fi
@@ -48,6 +37,8 @@ fi
 if [ ! -f /opt/business-ecosystem-charging-backend/src/wstore/asset_manager/resource_plugins/plugins/__init__.py ]; then
     touch /opt/business-ecosystem-charging-backend/src/wstore/asset_manager/resource_plugins/plugins/__init__.py
 fi
+
+cd /opt/business-ecosystem-charging-backend/src
 
 # Ensure mongodb is running
 # Get MongoDB host and port from settings
@@ -73,57 +64,6 @@ else
 fi
 
 test_connection "MongoDB" ${MONGO_HOST} ${MONGO_PORT}
-
-# Check that the required APIs are running
-if [ -z ${BAE_CB_CATALOG} ]; then
-    APIS_HOST=`grep "CATALOG =.*" ./services_settings.py | grep -o "://.*:" | grep -oE "[^:/]+"`
-    APIS_PORT=`grep "CATALOG =.*" ./services_settings.py | grep -oE ":[0-9]+" | grep -oE "[^:/]+"`
-else
-    APIS_HOST=`echo ${BAE_CB_CATALOG} | grep -o "://.*:" | grep -oE "[^:/]+"`
-    APIS_PORT=`echo ${BAE_CB_CATALOG} | grep -oE ":[0-9]+" | grep -oE "[^:/]+"`
-fi
-
-test_connection "APIs" ${APIS_HOST} ${APIS_PORT}
-
-# Check that the RSS is running
-if [ -z ${BAE_CB_RSS} ]; then
-    RSS_HOST=`grep "RSS =.*" ./services_settings.py | grep -o "://.*:" | grep -oE "[^:/]+"`
-    RSS_PORT=`grep "RSS =.*" ./services_settings.py | grep -oE ":[0-9]+" | grep -oE "[^:/]+"`
-else
-    RSS_HOST=`echo ${BAE_CB_RSS} | grep -o "://.*:" | grep -oE "[^:/]+"`
-    RSS_PORT=`echo ${BAE_CB_RSS} | grep -oE ":[0-9]+" | grep -oE "[^:/]+"`
-fi
-
-test_connection "RSS" ${RSS_HOST} ${RSS_PORT}
-
-# Check that inventory service is running
-wget http://${APIS_HOST}:${APIS_PORT}/DSProductInventory
-STATUS=$?
-I=0
-while [[ ${STATUS} -ne 0  && ${I} -lt 50 ]]; do
-    echo "Inventory API not ready retrying in 5 seconds..."
-
-    sleep 5
-    wget http://${APIS_HOST}:${APIS_PORT}/DSProductInventory
-    STATUS=$?
-
-    I=${I}+1
-done
-
-# Check that RSS service is running
-wget http://${RSS_HOST}:${RSS_PORT}/DSRevenueSharing
-STATUS=$?
-I=0
-while [[ ${STATUS} -ne 6  && ${I} -lt 50 ]]; do
-    echo "RSS API not ready retrying in 5 seconds..."
-
-    echo "===============> ${STATUS}"
-    sleep 5
-    wget http://${RSS_HOST}:${RSS_PORT}/DSRevenueSharing
-    STATUS=$?
-
-    I=${I}+1
-done
 
 echo "Starting charging server"
 

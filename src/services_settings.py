@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2016 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2016 CoNWeT Lab., Universidad Politécnica de Madrid
+
+# Copyright (c) 2023 Future Internet Consulting and Development Solutions S.L.
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -24,9 +26,9 @@ SITE = "http://proxy.docker:8004/"
 LOCAL_SITE = "http://charging.docker:8006/"
 
 CATALOG = "http://host.docker.internal:8632"
-INVENTORY = "http://apis.docker:8080/DSProductInventory"
+INVENTORY = "http://host.docker.internal:8635"
 ORDERING = "http://host.docker.internal:8634"
-BILLING = "http://apis.docker:8080/DSBillingManagement"
+BILLING = "http://host.docker.internal:8636"
 RSS = "http://rss.docker:8080/DSRevenueSharing"
-USAGE = "http://host.docker.internal:8632"
+USAGE = "http://host.docker.internal:8637"
 AUTHORIZE_SERVICE = "http://proxy.docker:8004/authorizeService/apiKeys"
