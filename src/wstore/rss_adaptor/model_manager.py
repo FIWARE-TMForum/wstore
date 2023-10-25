@@ -20,8 +20,11 @@
 
 
 from django.conf import settings
+from logging import getLogger
 
 from wstore.rss_adaptor.rss_manager import RSSManager
+
+logger = getLogger("wstore.default_logger")
 
 
 class ModelManager(RSSManager):
