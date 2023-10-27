@@ -18,7 +18,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import codecs
 import os
 import subprocess
@@ -36,7 +35,7 @@ from wstore.ordering.models import Offering
 logger = getLogger("wstore.default_logger")
 
 
-class InvoiceBuilder(object):
+class InvoiceBuilder:
     def __init__(self, order):
         self._order = order
         self._template_processors = {

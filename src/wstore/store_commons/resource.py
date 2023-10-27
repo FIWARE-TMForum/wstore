@@ -31,7 +31,7 @@ METHOD_MAPPING = {
 }
 
 
-class Resource(object):
+class Resource:
     def __init__(self, authentication=None, permitted_methods=None):
         self.permitted_methods = tuple([m.upper() for m in permitted_methods])
 

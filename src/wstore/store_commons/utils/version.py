@@ -51,7 +51,7 @@ def version_cmp(version1, version2):
 
 
 def key_fun_version(comparator, object_instance=False):
-    class key(object):
+    class key:
         def __init__(self, obj, *args):
             self.obj = obj
             if object_instance:

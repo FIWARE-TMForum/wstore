@@ -16,10 +16,15 @@ from django.core.exceptions import ObjectDoesNotExist
 CREATE_TESTS = [
     {  # ---------------------------------
         "name": "correct_basic",
-        "model": {"ownerProviderId": "provider", "ownerValue": 70, "aggregatorValue": 30, "productClass": "class"},
+        "model": {
+            "providerId": "provider",
+            "ownerValue": 70,
+            "aggregatorValue": 30,
+            "productClass": "class",
+        },
         "response_code": 201,
         "expected": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
             "ownerValue": "70",
             "aggregatorValue": "30",
             "productClass": "class",
@@ -30,7 +35,7 @@ CREATE_TESTS = [
     {  # ---------------------------------
         "name": "correct_stakeholders",
         "model": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
             "ownerValue": 50,
             "aggregatorValue": 30,
             "productClass": "class",
@@ -41,7 +46,7 @@ CREATE_TESTS = [
         },
         "response_code": 201,
         "expected": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
             "ownerValue": "50",
             "aggregatorValue": "30",
             "productClass": "class",
@@ -54,14 +59,19 @@ CREATE_TESTS = [
     },
     {  # ---------------------------------
         "name": "missing_owner_value",
-        "model": {"ownerProviderId": "provider", "aggregatorValue": 30, "productClass": "class", "stakeholders": []},
+        "model": {
+            "providerId": "provider",
+            "aggregatorValue": 30,
+            "productClass": "class",
+            "stakeholders": [],
+        },
         "response_code": 400,
         "expected": b"Error: Bad request: {'ownerValue': ['This field cannot be null.']}",
     },
     {  # ---------------------------------
         "name": "invalid_owner_value",
         "model": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
             "ownerValue": "invalid",
             "aggregatorValue": 30,
             "productClass": "class",
@@ -72,14 +82,19 @@ CREATE_TESTS = [
     },
     {  # ---------------------------------
         "name": "missing_aggregator_value",
-        "model": {"ownerProviderId": "provider", "ownerValue": 70, "productClass": "class", "stakeholders": []},
+        "model": {
+            "providerId": "provider",
+            "ownerValue": 70,
+            "productClass": "class",
+            "stakeholders": [],
+        },
         "response_code": 400,
         "expected": b"Error: Bad request: {'aggregatorValue': ['This field cannot be null.']}",
     },
     {  # ---------------------------------
         "name": "invalid_aggregator_value",
         "model": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
             "ownerValue": 70,
             "aggregatorValue": "invalid",
             "productClass": "class",
@@ -91,7 +106,7 @@ CREATE_TESTS = [
     {  # ---------------------------------
         "name": "invalid_percentage_sum",
         "model": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
             "ownerValue": 70,
             "aggregatorValue": 120,
             "productClass": "class",
@@ -103,7 +118,7 @@ CREATE_TESTS = [
     {  # ---------------------------------
         "name": "invalid_percentage_stakeholders",
         "model": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
             "ownerValue": 60,
             "aggregatorValue": 30,
             "productClass": "class",
@@ -119,11 +134,11 @@ CREATE_TESTS = [
         "name": "missing_provider",
         "model": {"ownerValue": 70, "aggregatorValue": 30, "productClass": "class", "stakeholders": []},
         "response_code": 400,
-        "expected": b"Error: Bad request: {'ownerProviderId': ['This field cannot be blank.']}",
+        "expected": b"Error: Bad request: {'providerId': ['This field cannot be blank.']}",
     },
     {  # ---------------------------------
         "name": "missing_class",
-        "model": {"ownerProviderId": "provider", "ownerValue": 70, "aggregatorValue": 30, "stakeholders": []},
+        "model": {"providerId": "provider", "ownerValue": 70, "aggregatorValue": 30, "stakeholders": []},
         "response_code": 400,
         "expected": b"Error: Bad request: {'productClass': ['This field cannot be blank.']}",
     },
@@ -134,7 +149,7 @@ UPDATE_TESTS = [
     {  # ---------------------------------
         "name": "correct_basic",
         "model": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
             "ownerValue": "70",
             "aggregatorValue": "30",
             "productClass": "class",
@@ -142,7 +157,7 @@ UPDATE_TESTS = [
             "stakeholders": [],
         },
         "update": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
             "ownerValue": 60,
             "aggregatorValue": 30,
             "productClass": "class",
@@ -153,7 +168,7 @@ UPDATE_TESTS = [
         },
         "response_code": 200,
         "expected": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
             "ownerValue": "60",
             "aggregatorValue": "30",
             "productClass": "class",
@@ -167,7 +182,32 @@ UPDATE_TESTS = [
     {  # ---------------------------------
         "name": "invalid_attribute",
         "model": {
-            "ownerProviderId": "provider",
+            "providerId": "provider",
+            "ownerValue": "50",
+            "aggregatorValue": "30",
+            "productClass": "class",
+            "algorithmType": "FIXED_PERCENTAGE",
+            "stakeholders": [
+                {"stakeholderId": "st1", "stakeholderValue": "10"},
+                {"stakeholderId": "st2", "stakeholderValue": "10"},
+            ],
+        },
+        "update": {
+            "providerId": "provider",
+            "ownerValue": 50,
+            "aggregatorValue": 30,
+            "stakeholders": [
+                {"stakeholderId": "st1", "stakeholderValue": 10},
+                {"stakeholderId": "st2", "stakeholderValue": 10},
+            ],
+        },
+        "response_code": 400,
+        "expected": b"Error: Bad request: must contain fields `providerId`, `productClass`.",
+    },
+    {  # ---------------------------------
+        "name": "invalid_update",
+        "model": {
+            "providerId": "provider",
             "ownerValue": "50",
             "aggregatorValue": "30",
             "productClass": "class",
@@ -183,32 +223,6 @@ UPDATE_TESTS = [
             "aggregatorValue": 30,
             "productClass": "class",
             "stakeholders": [
-                {"stakeholderId": "st1", "stakeholderValue": 10},
-                {"stakeholderId": "st2", "stakeholderValue": 10},
-            ],
-        },
-        "response_code": 400,
-        "expected": b"Error: Bad request: must contain fields `ownerProviderId`, `productClass`.",
-    },
-    {  # ---------------------------------
-        "name": "invalid_update",
-        "model": {
-            "ownerProviderId": "provider",
-            "ownerValue": "50",
-            "aggregatorValue": "30",
-            "productClass": "class",
-            "algorithmType": "FIXED_PERCENTAGE",
-            "stakeholders": [
-                {"stakeholderId": "st1", "stakeholderValue": "10"},
-                {"stakeholderId": "st2", "stakeholderValue": "10"},
-            ],
-        },
-        "update": {
-            "ownerProviderId": "provider",
-            "ownerValue": 50,
-            "aggregatorValue": 30,
-            "productClass": "class",
-            "stakeholders": [
                 {"stakeholderId": "st1", "stakeholderValue": 20},
                 {"stakeholderId": "st2", "stakeholderValue": 10},
             ],
@@ -219,7 +233,7 @@ UPDATE_TESTS = [
     {  # ---------------------------------
         "name": "model_does_not_exist",
         "model": {"exception": ObjectDoesNotExist()},
-        "update": {"ownerProviderId": "provider", "productClass": "class"},
+        "update": {"providerId": "provider", "productClass": "class"},
         "response_code": 404,
         "expected": b"Error: Revenue Sharing Model does not exist",
     },
@@ -231,7 +245,7 @@ GET_TESTS = [
         "name": "correct_basic",
         "result": [
             {
-                "ownerProviderId": "provider",
+                "providerId": "provider",
                 "ownerValue": "70",
                 "aggregatorValue": "30",
                 "productClass": "class",
@@ -253,12 +267,17 @@ class ModelManagerTestCase(TestCase):
         super(ModelManagerTestCase, cls).tearDownClass()
 
     def setUp(self):
+        self.maxDiff = None
         settings.WSTOREMAIL = "testmail@mail.com"
         settings.RSS = "http://testhost.com/rssHost/"
         settings.STORE_NAME = "wstore"
 
         # Create Mocks
-        rss_models.RSSModel.save = lambda *x, **y: rss_models.RSSModel.validate_value_sum(x[0])
+        def mock_save(*x, **y):
+            rss_models.RSSModel.full_clean(x[0])
+            rss_models.RSSModel.validate_value_sum(x[0])
+
+        rss_models.RSSModel.save = mock_save
         http_utils.authentication_required = lambda x: x
         reload(rss_views)
         TestCase.setUp(self)

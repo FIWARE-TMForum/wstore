@@ -38,7 +38,7 @@ PAGE_LEN = 100.0
 
 class InventoryUpgrader(Thread):
     def __init__(self, asset):
-        Thread.__init__(self)
+        super().__init__()
         self._asset = asset
         self._client = InventoryClient()
 

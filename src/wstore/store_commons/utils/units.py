@@ -18,11 +18,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 from django.conf import settings
 
 
-class ChargePeriod(object):
+class ChargePeriod:
     @staticmethod
     def contains(title):
         return title.lower() in settings.CHARGE_PERIODS
@@ -36,7 +35,7 @@ class ChargePeriod(object):
         return [{"title": t, "value": v} for t, v in settings.CHARGE_PERIODS.items()]
 
 
-class CurrencyCode(object):
+class CurrencyCode:
     @staticmethod
     def contains(value):
         return value.upper() in [v for v, t in settings.CURRENCY_CODES]

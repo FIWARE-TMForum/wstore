@@ -19,25 +19,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-import importlib
 import threading
 from datetime import datetime, timedelta
 from logging import getLogger
 
 from bson import ObjectId
-from django.conf import settings
 
 from wstore.admin.users.notification_handler import NotificationsHandler
 from wstore.charging_engine.accounting.sdr_manager import SDRManager
 from wstore.charging_engine.accounting.usage_client import UsageClient
 from wstore.charging_engine.charging.billing_client import BillingClient
-from wstore.charging_engine.charging.cdr_manager import CDRManager
+from wstore.rss.cdr_manager import CDRManager
 from wstore.charging_engine.invoice_builder import InvoiceBuilder
 from wstore.charging_engine.price_resolver import PriceResolver
 from wstore.charging_engine.payment_client.payment_client import PaymentClient
 from wstore.ordering.errors import OrderingError
-from wstore.ordering.models import Charge, Offering, Order, Payment
+from wstore.ordering.models import Charge, Offering, Order
 from wstore.ordering.ordering_client import OrderingClient
 from wstore.store_commons.database import get_database_connection
 from wstore.store_commons.utils.units import ChargePeriod

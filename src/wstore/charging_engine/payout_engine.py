@@ -18,7 +18,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import threading
 import time
 from collections import defaultdict
@@ -64,14 +63,13 @@ class PayoutWatcher(threading.Thread):
         if not url.endswith("/"):
             url += "/"
 
-        url += "rss/settlement/reports/{}".format(report)
+        url += f"rss/settlement/reports/{report}"
 
         logger.debug(f"PATCH {url}")
         response = requests.patch(url, json=data, headers=headers)
 
         if response.status_code != 200:
             logger.error(f"Error marking report {report} as paid: {response.reason}")
-            print(f"Error mark as paid report {report}: {response.reason}")
             return []
 
         return response.json()
@@ -150,7 +148,7 @@ class PayoutWatcher(threading.Thread):
         if mail not in semipaid.success:
             semipaid.success.append(mail)
 
-        logger.debug(f"Saving semipaid report")
+        logger.debug("Saving semipaid report")
         semipaid.save()
         return True
 
@@ -185,7 +183,7 @@ class PayoutWatcher(threading.Thread):
         self._check_reports_payout(payout)
 
     def _check_payout(self, payout):
-        logger.debug(f"Checking payout")
+        logger.debug("Checking payout")
         try:
             pay = Payout.find(payout["batch_header"]["payout_batch_id"])
             status = pay["batch_header"]["batch_status"]
@@ -203,7 +201,7 @@ class PayoutWatcher(threading.Thread):
             return False
 
     def _check_payouts(self):
-        logger.debug(f"Checking all payouts")
+        logger.debug("Checking all payouts")
         new = []
         for payout in self.payouts:
             pending = self._check_payout(payout)
@@ -219,12 +217,12 @@ class PayoutWatcher(threading.Thread):
             time.sleep(1)
 
 
-class PayoutEngine(object):
+class PayoutEngine:
     def __init__(self):
         self.paypal = PayPalClient(None)
 
     def _get_reports(self):
-        logger.debug(f"Getting reports")
+        logger.debug("Getting reports")
 
         headers = {
             "content-type": "application/json",
@@ -251,7 +249,7 @@ class PayoutEngine(object):
         response = requests.get(url, params=data, headers=headers)
 
         if response.status_code != 200:
-            logger.error(f"GET {url} returned {status_code} {response.reason}")
+            logger.error(f"GET {url} returned {response.status_code} {response.reason}")
             print("Error retrieving reports: {}".format(response.reason))
             return []
 
@@ -326,7 +324,7 @@ class PayoutEngine(object):
                     }
                     current_id += 1
                     currency_payments.append(payment)
-            logger.debug(f"Appending to payments: [<{len(currency_payments)} payments in {currency}>]")
+            logger.debug(f"Appending to payments: <{len(currency_payments)} payments in {currency}>")
             payments.append(currency_payments)
 
         context.payouts_n = current_id
@@ -335,7 +333,7 @@ class PayoutEngine(object):
         # _lock is set to false
         db.wstore_payout.find_one_and_update({"_id": reference}, {"$set": {"_lock": False}})
 
-        logger.debug(f"Processed payouts OK")
+        logger.debug("Processed payouts OK")
         return [self.paypal.batch_payout(paybatch) for paybatch in payments]
 
     def process_reports(self, reports):

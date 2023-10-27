@@ -18,7 +18,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -27,7 +26,7 @@ from django.conf import settings
 from wstore.charging_engine.accounting.errors import UsageError
 
 
-class UsageClient(object):
+class UsageClient:
     def __init__(self):
         self._usage_api = settings.USAGE
         if not self._usage_api.endswith("/"):

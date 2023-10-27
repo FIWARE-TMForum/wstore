@@ -128,8 +128,8 @@ urlpatterns = [
     #     r"^charging/api/revenueSharing/settlement/reports/?$",
     #     rss_views.SettlementReports(permitted_methods=("GET",)),
     # ),
-    # url(
-    #     r"^charging/api/revenueSharing/cdrs/?$",
-    #     rss_views.CDRs(permitted_methods=("GET",)),
-    # ),
+    url(
+        r"^charging/api/revenueSharing/cdrs/?$",
+        rss_views.CDRs(permitted_methods=("GET",)),
+    ),
 ]

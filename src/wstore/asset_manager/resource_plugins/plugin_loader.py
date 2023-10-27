@@ -18,7 +18,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import json
 import os
 import zipfile
@@ -37,7 +36,7 @@ from wstore.store_commons.utils.version import is_lower_version
 logger = getLogger("wstore.default_logger")
 
 
-class PluginLoader(object):
+class PluginLoader:
     _plugin_manager = None
     _plugins_path = None
     _plugins_module = None
