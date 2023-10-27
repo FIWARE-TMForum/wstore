@@ -111,7 +111,3 @@ class CDR(models.Model):
     currency = models.CharField(max_length=100)
     customerId = models.CharField(max_length=100)
     appProviderId = models.CharField(max_length=100)
-
-
-class Provider(models.Model):
-    ...

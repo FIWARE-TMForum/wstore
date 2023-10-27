@@ -45,7 +45,7 @@ MODE = "sandbox"  # sandbox or live
 
 class PayPalClient(PaymentClient):
     NAME = "paypal"
-    END_PAYMENT_PARAMS = ("paymentId", "payerID")
+    END_PAYMENT_PARAMS = ("paymentId", "PayerID")
     _purchase = None
     _checkout_url = None
 
@@ -141,8 +141,8 @@ class PayPalClient(PaymentClient):
         pass
 
     def end_redirection_payment(self, **kwargs):
-        token = kwargs["token"]
-        payer_id = kwargs["payer_id"]
+        token = kwargs["paymentId"]
+        payer_id = kwargs["PayerID"]
         payment = paypalrestsdk.Payment.find(token)
 
         if not payment.execute({"payer_id": payer_id}):

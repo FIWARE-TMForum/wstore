@@ -47,21 +47,18 @@ class PaymentConfirmation(Resource):
             off = Offering.objects.get(pk=ObjectId(contract.offering))
             return off.is_digital
 
-        # Set all order items as in progress
-        self.ordering_client.update_state(raw_order, "InProgress")
-
         # Set order items of digital products as completed
         involved_items = [t["item"] for t in transactions]
 
         digital_items = [
             item
-            for item in raw_order["orderItem"]
+            for item in raw_order["productOrderItem"]
             if item["id"] in involved_items and is_digital_contract(order.get_item_contract(item["id"]))
         ]
 
         # Oder Items state is not checked
         # self.ordering_client.update_items_state(raw_order, 'InProgress', digital_items)
-        self.ordering_client.update_items_state(raw_order, "Completed", digital_items)
+        self.ordering_client.update_items_state(raw_order, "completed", digital_items)
 
     def _set_renovation_states(self, transactions, raw_order, order):
         inventory_client = InventoryClient()
@@ -92,7 +89,7 @@ class PaymentConfirmation(Resource):
         if order.pending_payment["concept"] == "initial":
             # Set the order to failed in the ordering API
             # Set all items as Failed, mark the whole order as failed
-            self.ordering_client.update_items_state(raw_order, "Failed")
+            self.ordering_client.update_items_state(raw_order, "failed")
             order.delete()
         else:
             order.state = "paid"
@@ -204,7 +201,7 @@ class PaymentConfirmation(Resource):
         # Set the order to failed in the ordering API
         # Set all items as Failed, mark the whole order as Failed
         # client.update_state(raw_order, 'Failed')
-        self.ordering_client.update_items_state(raw_order, "Failed")
+        self.ordering_client.update_items_state(raw_order, "failed")
         order.delete()
 
         logger.debug(f"Payment candelled for order {order.order_id}.")

@@ -1233,17 +1233,17 @@ class ChargingEngineTestCase(TestCase):
 
 PAYPAL_DATA_BASE = {"action": "confirm", "confirm_action": "accept", "client": "paypal"}
 
-BASIC_PAYPAL = {**PAYPAL_DATA_BASE, "reference": "111111111111111111111111", "payerID": "payer", "paymentId": "payment"}
+BASIC_PAYPAL = {**PAYPAL_DATA_BASE, "reference": "111111111111111111111111", "PayerID": "payer", "paymentId": "payment"}
 
-MISSING_REF = {**PAYPAL_DATA_BASE, "payerID": "payer", "paymentId": "payment"}
+MISSING_REF = {**PAYPAL_DATA_BASE, "PayerID": "payer", "paymentId": "payment"}
 
 MISSING_PAYER = {**PAYPAL_DATA_BASE, "reference": "111111111111111111111111", "paymentId": "payment"}
 
-MISSING_PAYMENT = {**PAYPAL_DATA_BASE, "reference": "111111111111111111111111", "payerID": "payer"}
+MISSING_PAYMENT = {**PAYPAL_DATA_BASE, "reference": "111111111111111111111111", "PayerID": "payer"}
 
 MISSING_RESP = {
     "result": "error",
-    "error": "Invalid request: Missing required field. It must contain ['paymentId', 'payerID', 'reference'] field(s).",
+    "error": "Invalid request: Missing required field. It must contain ['paymentId', 'PayerID', 'reference'] field(s).",
 }
 
 LOCK_CLOSED_RESP = {
@@ -1317,7 +1317,7 @@ class PaymentConfirmationTestCase(TestCase):
 
         # Mock payment client
         mock_payment_client(self, views)
-        self._payment_class.END_PAYMENT_PARAMS = ("paymentId", "payerID")
+        self._payment_class.END_PAYMENT_PARAMS = ("paymentId", "PayerID")
 
         # Mock Charging engine
         views.ChargingEngine = MagicMock()

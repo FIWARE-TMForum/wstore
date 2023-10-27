@@ -241,8 +241,8 @@ class ChargingEngine:
             valid_from, valid_to = self.end_processors[concept](contract, transaction)
 
             # If the customer has been charged create the CDR
-            cdr_manager = CDRManager(self._order, contract)
-            cdr_manager.generate_cdr(transaction["related_model"], time_stamp.isoformat() + "Z")
+            #cdr_manager = CDRManager(self._order, contract)
+            #cdr_manager.generate_cdr(transaction["related_model"], time_stamp.isoformat() + "Z")
 
             # Generate the invoice
             invoice_path = ""
@@ -269,12 +269,13 @@ class ChargingEngine:
             # Send the charge to the billing API to allow user accesses
             if concept != "initial":
                 # When the change concept is initial, the product has not been yet created in the inventory
-                billing_client.create_charge(
-                    charge,
-                    contract.product_id,
-                    start_date=valid_from,
-                    end_date=valid_to,
-                )
+                # billing_client.create_charge(
+                #     charge,
+                #     contract.product_id,
+                #     start_date=valid_from,
+                #     end_date=valid_to,
+                # )
+                pass
 
         for free in free_contracts:
             logger.debug(f"Setting {free.offering} as acquired")

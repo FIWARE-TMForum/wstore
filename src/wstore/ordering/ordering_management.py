@@ -57,7 +57,6 @@ class OrderingManager:
 
     def _get_offering(self, item):
         # Download related product offering and product specification
-        site = urlparse(settings.SITE)
         catalog = urlparse(settings.CATALOG)
 
         offering_id = item["productOffering"]["href"]
@@ -98,11 +97,14 @@ class OrderingManager:
             "usage": "unitOfMeasure",
         }
 
+        value = str(price["price"]["taxIncludedAmount"]["value"])
+        tax_rate = str(price["price"]["taxRate"])
+        duty_free = str(Decimal(value) - ((Decimal(value) * Decimal(tax_rate)) / 100))
         return {
-            "value": price["price"]["taxIncludedAmount"],
+            "value": value,
             "unit": price[unit_field[price["priceType"].lower()]].lower(),
-            "tax_rate": price["price"]["taxRate"],
-            "duty_free": price["price"]["dutyFreeAmount"],
+            "tax_rate": tax_rate,
+            "duty_free": duty_free
         }
 
     def _parse_alteration(self, alteration, type_):
@@ -149,57 +151,45 @@ class OrderingManager:
         def field_included(pricing, field):
             return field in pricing and len(pricing[field]) > 0
 
-        matches = 0
-        price = None
+        offering_pricing = None
         for off_price in offering_info["productOfferingPrice"]:
-            # Change the price to string in order to avoid problems with floats
-            product_price["price"]["amount"] = str(product_price["price"]["amount"])
+            if off_price["id"] == product_price["productOfferingPrice"]["id"]:
+                # Download the product offering price model
+                catalog = urlparse(settings.CATALOG)
+                price_url = "{}://{}{}/{}".format(catalog.scheme, catalog.netloc, catalog.path + '/productOfferingPrice', off_price["id"])
+                offering_pricing = self._download(price_url, "product offering price", off_price["id"])
 
-            # Validate that all pricing fields matches
-            if (
-                off_price["priceType"].lower() == product_price["priceType"].lower()
-                and (
-                    (
-                        not field_included(off_price, "unitOfMeasure")
-                        and not field_included(product_price, "unitOfMeasure")
-                    )
-                    or (
-                        field_included(off_price, "unitOfMeasure")
-                        and field_included(product_price, "unitOfMeasure")
-                        and off_price["unitOfMeasure"].lower() == product_price["unitOfMeasure"].lower()
-                    )
-                )
-                and (
-                    (
-                        not field_included(off_price, "recurringChargePeriod")
-                        and not field_included(product_price, "recurringChargePeriod")
-                    )
-                    or (
-                        field_included(off_price, "recurringChargePeriod")
-                        and field_included(product_price, "recurringChargePeriod")
-                        and off_price["recurringChargePeriod"].lower() == product_price["recurringChargePeriod"].lower()
-                    )
-                )
-                and Decimal(off_price["price"]["taxIncludedAmount"]) == Decimal(product_price["price"]["amount"])
-                and off_price["price"]["currencyCode"].lower() == product_price["price"]["currency"].lower()
-            ):
-                matches += 1
-                price = off_price
-
-        if not matches:
+                break
+        else:
+            # The given price does not match any from the product offering
             logger.error("Product price does not match any prices in offering")
             raise OrderingError(
                 f"The product price included in orderItem {item_id} "
                 "does not match with any of the prices included in the related offering"
             )
-        elif matches > 1:
-            logger.error("Product price matches more than one price in offering")
+
+        # Validate that all pricing fields match
+        if (offering_pricing["priceType"].lower() != product_price["priceType"].lower()
+                or (field_included(offering_pricing, "unitOfMeasure") and not field_included(product_price, "unitOfMeasure"))
+                or (not field_included(offering_pricing, "unitOfMeasure") and field_included(product_price, "unitOfMeasure"))
+                or (field_included(offering_pricing, "unitOfMeasure") and field_included(product_price, "unitOfMeasure")
+                    and offering_pricing["unitOfMeasure"].lower() != product_price["unitOfMeasure"].lower())
+
+                or (field_included(offering_pricing, "recurringChargePeriod") and not field_included(product_price, "recurringChargePeriod"))
+                or (not field_included(offering_pricing, "recurringChargePeriod") and field_included(product_price, "recurringChargePeriod"))
+                or (field_included(offering_pricing, "recurringChargePeriod") and field_included(product_price, "recurringChargePeriod")
+                    and offering_pricing["recurringChargePeriod"].lower() != product_price["recurringChargePeriod"].lower())
+
+                or Decimal(offering_pricing["price"]["value"]) != Decimal(product_price["price"]["taxIncludedAmount"]["value"])
+                or offering_pricing["price"]["unit"].lower() != product_price["price"]["taxIncludedAmount"]["unit"].lower()):
+
+            logger.error("Product price does not match any prices in offering")
             raise OrderingError(
                 f"The product price included in orderItem {item_id} "
-                "matches with multiple pricing models of the related offering"
+                "does not match with any of the prices included in the related offering"
             )
 
-        return price
+        return product_price
 
     def _build_contract(self, item):
         # Build offering
@@ -214,16 +204,15 @@ class OrderingManager:
                 "usage": "pay_per_use",
             }
 
-            # The productPrice field in the orderItem does not contain all the needed
-            # information (neither taxes nor alterations), so extract pricing from the offering
             price = self._get_effective_pricing(item["id"], item["product"]["productPrice"][0], offering_info)
 
             price_unit = self._parse_price(model_mapper, price)
 
-            pricing["general_currency"] = price["price"]["currencyCode"]
+            pricing["general_currency"] = price["price"]["taxIncludedAmount"]["unit"]
             pricing[model_mapper[price["priceType"].lower()]] = [price_unit]
 
             # Process price alterations
+            # TODO: Current implementation of the Catalog API does not support price alterations
             if "productOfferPriceAlteration" in price:
                 alteration = price["productOfferPriceAlteration"]
 
