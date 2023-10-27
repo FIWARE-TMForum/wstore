@@ -99,10 +99,10 @@ class InventoryClient:
         # Build product url
         url = self._inventory_api + "/product/" + str(product_id)
 
-        r = requests.patch(url, json=patch_body)
-        r.raise_for_status()
+        response = requests.patch(url, json=patch_body)
+        response.raise_for_status()
 
-        return r.json()
+        return response.json()
 
     def activate_product(self, product_id):
         """
@@ -144,7 +144,7 @@ class InventoryClient:
     def create_product(self, product):
         url = self._inventory_api + "/product/"
 
-        r = requests.post(url, json=product)
-        r.raise_for_status()
+        response = requests.post(url, json=product)
+        response.raise_for_status()
 
-        return r.json()
+        return response.json()

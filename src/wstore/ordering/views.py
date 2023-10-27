@@ -125,53 +125,11 @@ class InventoryCollection(Resource):
         # Extract order id
         order_id = product["name"].split("=")[1]
 
-        # Get order
-        order = Order.objects.get(order_id=order_id)
-        contract = None
+        om = OrderingManager()
+        code, error = om.activate_product(order_id, product)
 
-        # Search contract
-        new_contracts = []
-        for cont in order.get_contracts():
-            off = Offering.objects.get(pk=ObjectId(cont.offering))
-            if product["productOffering"]["id"] == off.off_id:
-                contract = cont
-
-            new_contracts.append(cont)
-
-        if contract is None:
-            return build_response(request, 404, "There is not a contract for the specified product")
-
-        # Save contract id
-        contract.product_id = product["id"]
-
-        # Needed to update the contract info with new model
-        order.contracts = new_contracts
-        order.save()
-
-        # Activate asset
-        try:
-            on_product_acquired(order, contract)
-        except:
-            return build_response(request, 400, "The asset has failed to be activated")
-
-        # Change product state to active
-        inventory_client = InventoryClient()
-        inventory_client.activate_product(product["id"])
-
-        # Create the initial charge in the billing API
-        if contract.charges is not None and len(contract.charges) == 1:
-            billing_client = BillingClient()
-            valid_to = None
-            # If the initial charge was a subscription is needed to determine the expiration date
-            if "subscription" in contract.pricing_model:
-                valid_to = contract.pricing_model["subscription"][0]["renovation_date"]
-
-            billing_client.create_charge(
-                contract.charges[0],
-                contract.product_id,
-                start_date=None,
-                end_date=valid_to,
-            )
+        if error is not None:
+            return build_response(request, code, error)
 
         return build_response(request, 200, "OK")
 

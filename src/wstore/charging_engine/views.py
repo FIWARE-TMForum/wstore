@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2013 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2023 Future Internet Consulting and Development Solutions S.L.
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -34,6 +35,7 @@ from wstore.ordering.errors import PaymentError, PaymentTimeoutError
 from wstore.ordering.inventory_client import InventoryClient
 from wstore.ordering.models import Offering, Order
 from wstore.ordering.ordering_client import OrderingClient
+from wstore.ordering.ordering_management import OrderingManager
 from wstore.store_commons.database import get_database_connection
 from wstore.store_commons.resource import Resource
 from wstore.store_commons.utils.http import authentication_required, build_response, supported_request_mime_types
@@ -59,6 +61,14 @@ class PaymentConfirmation(Resource):
         # Oder Items state is not checked
         # self.ordering_client.update_items_state(raw_order, 'InProgress', digital_items)
         self.ordering_client.update_items_state(raw_order, "completed", digital_items)
+
+        # Notify order completed
+        try:
+            om = OrderingManager()
+            om.notify_completed(raw_order)
+        except:
+            # The order is correct so we cannot set is as failed
+            logger.error("The products for order {} could not be created".format(raw_order["id"]))
 
     def _set_renovation_states(self, transactions, raw_order, order):
         inventory_client = InventoryClient()

@@ -30,8 +30,9 @@ import requests
 from bson import ObjectId
 from django.conf import settings
 
+from wstore.charging_engine.charging.billing_client import BillingClient
 from wstore.asset_manager.product_validator import ProductValidator
-from wstore.asset_manager.resource_plugins.decorators import on_product_suspended
+from wstore.asset_manager.resource_plugins.decorators import on_product_suspended, on_product_acquired
 from wstore.charging_engine.charging_engine import ChargingEngine
 from wstore.ordering.errors import OrderingError
 from wstore.ordering.inventory_client import InventoryClient
@@ -476,4 +477,55 @@ class OrderingManager:
             product["productOffering"] = orderItem["productOffering"]
 
             inventory_client = InventoryClient()
-            inventory_client.create_product(product)
+            new_product = inventory_client.create_product(product)
+
+            self.activate_product(order["id"], new_product)
+
+    def activate_product(self, order_id, product):
+        # Get order
+        order = Order.objects.get(order_id=order_id)
+        contract = None
+
+        # Search contract
+        new_contracts = []
+        for cont in order.get_contracts():
+            off = Offering.objects.get(pk=ObjectId(cont.offering))
+            if product["productOffering"]["id"] == off.off_id:
+                contract = cont
+
+            new_contracts.append(cont)
+
+        if contract is None:
+            return 404, "There is not a contract for the specified product"
+
+        # Save contract id
+        contract.product_id = product["id"]
+
+        # Needed to update the contract info with new model
+        order.contracts = new_contracts
+        order.save()
+
+        # Activate asset
+        try:
+            on_product_acquired(order, contract)
+        except:
+            return 400, "The asset has failed to be activated"
+
+        # Change product state to active
+        inventory_client = InventoryClient()
+        inventory_client.activate_product(product["id"])
+
+        # Create the initial charge in the billing API
+        if contract.charges is not None and len(contract.charges) == 1:
+            billing_client = BillingClient()
+            valid_to = None
+            # If the initial charge was a subscription is needed to determine the expiration date
+            if "subscription" in contract.pricing_model:
+                valid_to = contract.pricing_model["subscription"][0]["renovation_date"]
+
+            # billing_client.create_charge(
+            #     contract.charges[0],
+            #     contract.product_id,
+            #     start_date=None,
+            #     end_date=valid_to,
+            # )

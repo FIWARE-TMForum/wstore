@@ -97,19 +97,21 @@ class RevenueSharingModels(APIResource):
             query_offset = int(request.GET.get("offset", 0))
             query_end = query_offset + int(request.GET.get("size", 10))
             models = RSSModel.objects.filter(
-                productClass=request.GET.get("productClass", None),
-                algorithmType=request.GET.get("algorithmType", None),
+                #productClass=request.GET.get("productClass", None),
+                #algorithmType=request.GET.get("algorithmType", None),
                 ownerProviderId=request.GET.get("ownerProviderId", None),
             )[query_offset:query_end].values()
+
             if models:
-                return HttpResponse(
-                    json.dumps(models, cls=DjangoJSONEncoder),
+                response = json.dumps(models, cls=DjangoJSONEncoder)
+            else:
+                response = json.dumps([])
+
+            return HttpResponse(
+                    response,
                     status=200,
                     content_type="application/json; charset=utf-8",
                 )
-            else:
-                error = 204, "No models matching query"
-
         except Exception as e:
             logger.error(f"Couldn't return RSS models: \n{e}")
             error = 400, "Bad request"
