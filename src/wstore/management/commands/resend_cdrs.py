@@ -20,11 +20,10 @@
 
 from datetime import datetime
 
-from bson import ObjectId
 from django.core.management.base import BaseCommand, CommandError
 
 from wstore.models import Context, Organization
-from wstore.rss_adaptor.rss_adaptor import RSSAdaptor
+from wstore.rss.cdr_manager import register_cdr
 from wstore.store_commons.database import get_database_connection
 
 
@@ -62,5 +61,4 @@ class Command(BaseCommand):
 
             cdr["correlation"] = new_org["correlation_number"]
 
-        r = RSSAdaptor()
-        r.send_cdr(cdrs)
+        register_cdr(cdrs)

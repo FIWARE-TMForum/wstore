@@ -19,7 +19,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import json
 from copy import deepcopy
 from logging import getLogger
@@ -28,7 +27,7 @@ from requests.exceptions import HTTPError
 from bson import ObjectId
 
 from wstore.asset_manager.resource_plugins.decorators import on_product_acquired
-from wstore.charging_engine.charging.cdr_manager import CDRManager
+from wstore.rss.cdr_manager import CDRManager
 from wstore.charging_engine.charging_engine import ChargingEngine
 from wstore.charging_engine.payment_client.payment_client import PaymentClient, PaymentClientError
 from wstore.ordering.errors import PaymentError, PaymentTimeoutError

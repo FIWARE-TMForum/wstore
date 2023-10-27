@@ -19,7 +19,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import os
 from importlib import reload
 from json import dump as jsondump
@@ -38,7 +37,7 @@ from wstore.asset_manager.resource_plugins.test_data import *
 from wstore.models import ResourcePlugin
 
 
-class TestPlugin(object):
+class TestPlugin:
     def __init__(self, plugin_model):
         self._plugin_model = plugin_model
 
@@ -92,8 +91,16 @@ class PluginLoaderTestCase(TestCase):
 
     @parameterized.expand(
         [
-            ("correct", "test_plugin.zip", PLUGIN_INFO),
-            ("correct_no_optionals", "test_plugin_5.zip", PLUGIN_INFO2),
+            (
+                "correct",
+                "test_plugin.zip",
+                PLUGIN_INFO,
+            ),
+            (
+                "correct_no_optionals",
+                "test_plugin_5.zip",
+                PLUGIN_INFO2,
+            ),
             (
                 "pull_accounting",
                 "test_plugin_8.zip",

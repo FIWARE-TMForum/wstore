@@ -18,7 +18,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 from datetime import datetime
 
 from django.contrib.auth.models import User
@@ -28,7 +27,7 @@ from wstore.models import Organization
 from wstore.ordering.models import Order
 
 
-class SDRManager(object):
+class SDRManager:
     def __init__(self):
         self._order = None
         self._contract = None

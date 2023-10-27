@@ -45,7 +45,7 @@ class RSSValidators:
         return validator
 
 
-class Provider(models.Model):
+class Stakeholder(models.Model):
     stakeholderId = models.CharField(
         max_length=100, primary_key=True, blank=False, validators=[RSSValidators.validate_type(str)]
     )
@@ -58,7 +58,8 @@ class Provider(models.Model):
 
 
 class RSSModel(models.Model):
-    ownerProviderId = models.CharField(max_length=100, blank=False, validators=[RSSValidators.validate_type(str)])
+    # `providerId` is compatible with `Organization.name`
+    providerId = models.CharField(max_length=50)
     productClass = models.CharField(max_length=100, blank=False, validators=[RSSValidators.validate_type(str)])
     algorithmType = models.CharField(
         max_length=100, default="FIXED_PERCENTAGE", validators=[RSSValidators.validate_type(str)]
@@ -70,11 +71,11 @@ class RSSModel(models.Model):
         max_digits=7, decimal_places=4, validators=[MinValueValidator(0.0), MaxValueValidator(100.0)]
     )
     stakeholders = models.ArrayField(
-        model_container=Provider, default=list, blank=True, validators=[RSSValidators.validate_stakeholders]
+        model_container=Stakeholder, default=list, blank=True, validators=[RSSValidators.validate_stakeholders]
     )
 
     class Meta:
-        unique_together = ("ownerProviderId", "productClass")
+        unique_together = ("providerId", "productClass")
 
     def validate_value_sum(self):
         stakeholder_value_sum = sum(map(lambda stakeholder: stakeholder["stakeholderValue"], self.stakeholders))
@@ -85,6 +86,7 @@ class RSSModel(models.Model):
             )
 
     def save(self, *args, **kwargs):
+        self.full_clean()
         self.validate_value_sum()
         super(RSSModel, self).save(*args, **kwargs)
 
@@ -95,19 +97,23 @@ class CDR(models.Model):
     """
 
     class TransactionTypes(models.TextChoices):
-        C = "C", "Charge"
-        R = "R", "Refund"
+        CHARGE = "C", "Charge"
+        REFUND = "R", "Refund"
 
     productClass = models.CharField(max_length=100)
     correlationNumber = models.CharField(max_length=100)
     timestamp = models.DateTimeField()
     application = models.CharField(max_length=100)
-    transactionType = models.CharField(max_length=1, choices=TransactionTypes.choices, default=TransactionTypes.C)
+    transactionType = models.CharField(max_length=1, choices=TransactionTypes.choices, default=TransactionTypes.CHARGE)
     event = models.CharField(max_length=100)
     referenceCode = models.CharField(max_length=100)
     description = models.TextField()
-    chargedAmount = models.DecimalField(max_digits=20, decimal_places=10)
-    chargedTaxAmount = models.DecimalField(max_digits=20, decimal_places=10)
+    chargedAmount = models.DecimalField(max_digits=20, decimal_places=4)
+    chargedTaxAmount = models.DecimalField(max_digits=20, decimal_places=4)
     currency = models.CharField(max_length=100)
     customerId = models.CharField(max_length=100)
-    appProviderId = models.CharField(max_length=100)
+    providerId = models.CharField(max_length=50)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super(RSSModel, self).save(*args, **kwargs)

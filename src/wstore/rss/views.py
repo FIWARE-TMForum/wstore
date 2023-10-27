@@ -3,7 +3,7 @@ import json
 from wstore.store_commons.utils.http import authentication_required, build_response, supported_request_mime_types
 from django.core.exceptions import ValidationError
 from logging import getLogger
-from wstore.rss.models import RSSModel
+from wstore.rss.models import RSSModel, CDR
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms.models import model_to_dict
 from django.http import HttpResponse
@@ -20,14 +20,13 @@ class RevenueSharingModels(APIResource):
         try:
             data = json.loads(request.body)
             model = RSSModel(**data)
-            model.full_clean()
             model.save()
             return HttpResponse(
                 json.dumps(
                     model_to_dict(
                         model,
                         fields=[
-                            "ownerProviderId",
+                            "providerId",
                             "productClass",
                             "algorithmType",
                             "ownerValue",
@@ -52,20 +51,19 @@ class RevenueSharingModels(APIResource):
     def update(self, request):
         try:
             data = json.loads(request.body)
-            model = RSSModel.objects.get(ownerProviderId=data["ownerProviderId"], productClass=data["productClass"])
+            model = RSSModel.objects.get(providerId=data["providerId"], productClass=data["productClass"])
             model.algorithmType = data.get("algorithmType", model.algorithmType)
             model.ownerValue = data.get("ownerValue", model.ownerValue)
             model.aggregatorValue = data.get("aggregatorValue", model.aggregatorValue)
             model.stakeholders = data.get("stakeholders", model.stakeholders)
 
-            model.full_clean()
             model.save(update_fields=data.keys())
             return HttpResponse(
                 json.dumps(
                     model_to_dict(
                         model,
                         fields=[
-                            "ownerProviderId",
+                            "providerId",
                             "productClass",
                             "algorithmType",
                             "ownerValue",
@@ -81,7 +79,7 @@ class RevenueSharingModels(APIResource):
 
         except (NameError, KeyError) as e:
             logger.error(f"Bad request: Must contain {e}")
-            error = 400, "Bad request: must contain fields `ownerProviderId`, `productClass`."
+            error = 400, "Bad request: must contain fields `providerId`, `productClass`."
         except ValidationError as e:
             logger.error(f"Could't update Revenue Sharing Model:\n{e}")
             error = 400, f"Bad request: {e}"
@@ -96,22 +94,21 @@ class RevenueSharingModels(APIResource):
         try:
             query_offset = int(request.GET.get("offset", 0))
             query_end = query_offset + int(request.GET.get("size", 10))
-            models = RSSModel.objects.filter(
-                #productClass=request.GET.get("productClass", None),
-                #algorithmType=request.GET.get("algorithmType", None),
-                ownerProviderId=request.GET.get("ownerProviderId", None),
-            )[query_offset:query_end].values()
-
-            if models:
-                response = json.dumps(models, cls=DjangoJSONEncoder)
-            else:
-                response = json.dumps([])
-
+            models = list(
+                RSSModel.objects.filter(
+                    **{
+                        param: request.GET[param]
+                        for param in ("productClass", "algorithmType", "providerId")
+                        if param in request.GET
+                    }
+                )[query_offset:query_end].values()
+            )
             return HttpResponse(
-                    response,
-                    status=200,
-                    content_type="application/json; charset=utf-8",
-                )
+                json.dumps(models, cls=DjangoJSONEncoder),
+                status=200,
+                content_type="application/json; charset=utf-8",
+            )
+
         except Exception as e:
             logger.error(f"Couldn't return RSS models: \n{e}")
             error = 400, "Bad request"
@@ -134,6 +131,15 @@ class Settlements(APIResource):
     @authentication_required
     def create(self, request):
         ...
+        # PSEUDO CODE
+        # IN SEPARATE THREAD
+        # providers = getProviders()
+        # for provider in providers:
+        #     for model in provider.getModels():
+        #         transactions = getTransactions(Model)
+        #         if transactions:
+        #             setTransactionsState(transactions, "processing")
+        #             runTask(settlementTask, transactions)
 
 
 class SettlementReports(APIResource):
@@ -142,23 +148,22 @@ class SettlementReports(APIResource):
 
 class CDRs(APIResource):
     def read(self, request):
-        ...
-        # try:
-        #     query_offset = request.GET.get("offset", "0")
-        #     query_end = query_offset + request.GET.get("size", "10")
-        #     cdrs = CDR.objects.filter(
-        #         productClass=request.GET.get("productClass", None),
-        #         algorithmType=request.GET.get("algorithmType", None),
-        #         ownerProviderId=request.GET.get("ownerProviderId", None),
-        #     ).values()[query_offset:query_end]
-        #
-        #     if cdrs:
-        #         return build_response(request, 200, cdrs)
-        #
-        #     error = 204, "No models matching query"
-        #
-        # except Exception as e:
-        #     logger.error(f"Couldn't return CDR models: \n{e}")
-        #     error = 400, "Bad request"
-        #
-        # return build_response(request, *error)
+        try:
+            query_offset = int(request.GET.get("offset", 0))
+            query_end = query_offset + int(request.GET.get("size", 10))
+            models = list(
+                CDR.objects.filter(**{param: request.GET[param] for param in ("providerId") if param in request.GET})[
+                    query_offset:query_end
+                ].values()
+            )
+            return HttpResponse(
+                json.dumps(models, cls=DjangoJSONEncoder),
+                status=200,
+                content_type="application/json; charset=utf-8",
+            )
+
+        except Exception as e:
+            logger.error(f"Couldn't return RSS models: \n{e}")
+            error = 400, "Bad request"
+
+        return build_response(request, *error)

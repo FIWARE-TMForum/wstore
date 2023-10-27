@@ -19,7 +19,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 from copy import deepcopy
 from logging import getLogger
 
@@ -31,7 +30,7 @@ from wstore.charging_engine.accounting.usage_client import UsageClient
 logger = getLogger("wstore.default_logger")
 
 
-class Plugin(object):
+class Plugin:
     def __init__(self, plugin_model):
         self._model = plugin_model
 
@@ -114,7 +113,7 @@ class Plugin(object):
                 # Save the spec href to be used in usage documents
                 self._model.options["usage"][spec["name"].lower()] = created_spec["href"]
                 self._model.save()
-                logger.debug(f"Usage specifications created")
+                logger.debug("Usage specifications created")
 
     def remove_usage_specs(self):
         logger.debug(f"Removing usage specifications for {self._model}")
