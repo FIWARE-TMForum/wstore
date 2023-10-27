@@ -59,7 +59,7 @@ class Stakeholder(models.Model):
 
 class RSSModel(models.Model):
     # `providerId` is compatible with `Organization.name`
-    providerId = models.CharField(max_length=50)
+    providerId = models.CharField(max_length=100)
     productClass = models.CharField(max_length=100, blank=False, validators=[RSSValidators.validate_type(str)])
     algorithmType = models.CharField(
         max_length=100, default="FIXED_PERCENTAGE", validators=[RSSValidators.validate_type(str)]
@@ -112,7 +112,7 @@ class CDR(models.Model):
     chargedTaxAmount = models.DecimalField(max_digits=20, decimal_places=4)
     currency = models.CharField(max_length=100)
     customerId = models.CharField(max_length=100)
-    providerId = models.CharField(max_length=50)
+    providerId = models.CharField(max_length=100)
 
     def save(self, *args, **kwargs):
         self.full_clean()
