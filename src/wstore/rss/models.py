@@ -65,10 +65,10 @@ class RSSModel(models.Model):
         max_length=100, default="FIXED_PERCENTAGE", validators=[RSSValidators.validate_type(str)]
     )
     ownerValue = models.DecimalField(
-        max_digits=7, decimal_places=4, validators=[MinValueValidator(0.0), MaxValueValidator(100.0)]
+        max_digits=7, decimal_places=2, validators=[MinValueValidator(0.0), MaxValueValidator(100.0)]
     )
     aggregatorValue = models.DecimalField(
-        max_digits=7, decimal_places=4, validators=[MinValueValidator(0.0), MaxValueValidator(100.0)]
+        max_digits=7, decimal_places=2, validators=[MinValueValidator(0.0), MaxValueValidator(100.0)]
     )
     stakeholders = models.ArrayField(
         model_container=Stakeholder, default=list, blank=True, validators=[RSSValidators.validate_stakeholders]
