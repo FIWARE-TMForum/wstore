@@ -1,14 +1,16 @@
-from wstore.store_commons.resource import Resource as APIResource
 import json
-from wstore.store_commons.utils.http import authentication_required, build_response, supported_request_mime_types
-from django.core.exceptions import ValidationError
 from logging import getLogger
+
+from wstore.store_commons.utils.http import authentication_required, build_response, supported_request_mime_types
+from wstore.store_commons.resource import Resource as APIResource
 from wstore.rss.models import RSSModel, CDR
+from wstore.rss.algorithms.rss_algorithm import RSS_ALGORITHMS
+from wstore.store_commons.utils.json_encoder import CustomEncoder
+
+from django.core.exceptions import ValidationError
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms.models import model_to_dict
 from django.http import HttpResponse
-from django.core.serializers.json import DjangoJSONEncoder
-from wstore.rss.algorithms.rss_algorithm import RSS_ALGORITHMS
 
 logger = getLogger("wstore.default_logger")
 
@@ -34,7 +36,7 @@ class RevenueSharingModels(APIResource):
                             "stakeholders",
                         ],
                     ),
-                    cls=DjangoJSONEncoder,
+                    cls=CustomEncoder,
                 ),
                 status=201,
                 content_type="application/json; charset=utf-8",
@@ -71,7 +73,7 @@ class RevenueSharingModels(APIResource):
                             "stakeholders",
                         ],
                     ),
-                    cls=DjangoJSONEncoder,
+                    cls=CustomEncoder,
                 ),
                 status=200,
                 content_type="application/json; charset=utf-8",
@@ -104,7 +106,7 @@ class RevenueSharingModels(APIResource):
                 )[query_offset:query_end].values()
             )
             return HttpResponse(
-                json.dumps(models, cls=DjangoJSONEncoder),
+                json.dumps(models, cls=CustomEncoder),
                 status=200,
                 content_type="application/json; charset=utf-8",
             )
@@ -122,7 +124,7 @@ class RevenueSharingAlgorithms(APIResource):
         algorithms = [cls.to_dict() for id, cls in RSS_ALGORITHMS.items()]
 
         return HttpResponse(
-            json.dumps(algorithms, cls=DjangoJSONEncoder), status=200, content_type="application/json; charset=utf-8"
+            json.dumps(algorithms, cls=CustomEncoder), status=200, content_type="application/json; charset=utf-8"
         )
 
 
@@ -157,7 +159,7 @@ class CDRs(APIResource):
                 ].values()
             )
             return HttpResponse(
-                json.dumps(models, cls=DjangoJSONEncoder),
+                json.dumps(models, cls=CustomEncoder),
                 status=200,
                 content_type="application/json; charset=utf-8",
             )
