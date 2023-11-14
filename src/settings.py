@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013 - 2018 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2013 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2023 Future Internet Consulting and Development Solutions S.L.
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -268,7 +269,6 @@ CATALOG = environ.get("BAE_CB_CATALOG", CATALOG)
 INVENTORY = environ.get("BAE_CB_INVENTORY", INVENTORY)
 ORDERING = environ.get("BAE_CB_ORDERING", ORDERING)
 BILLING = environ.get("BAE_CB_BILLING", BILLING)
-RSS = environ.get("BAE_CB_RSS", RSS)
 USAGE = environ.get("BAE_CB_USAGE", USAGE)
 AUTHORIZE_SERVICE = environ.get("BAE_CB_AUTHORIZE_SERVICE", AUTHORIZE_SERVICE)
 

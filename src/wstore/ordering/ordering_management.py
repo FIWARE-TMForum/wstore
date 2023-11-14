@@ -250,69 +250,37 @@ class OrderingManager:
             offering=offering.pk,
         )
 
-    def _get_billing_address(self, items):
-        # def _download_asset(url):
-        #     headers = {
-        #         #'Authorization': 'Bearer ' + self._customer.userprofile.access_token
-        #     }
+    def _get_billing_address(self, billing_account):
+        # Download BillingAccount
+        account = None
+        try:
+            billing_client = BillingClient()
+            account = billing_client.get_billing_account(billing_account["id"])
+        except Exception as e:
+            logger.error("Error retriving billing account {}".format(str(e)))
+            raise OrderingError(
+                "Invalid billing account, billing account could not be loaded"
+            )
 
-        #     if not self._customer.userprofile.current_organization.private:
-        #         headers["x-organization"] = self._customer.userprofile.current_organization.name
+        postal_addresses = [
+            contactMedium for contactMedium in account["contact"][0]["contactMedium"] if contactMedium["mediumType"] == "PostalAddress"
+        ]
 
-        #     r = requests.get(url, headers=headers, verify=settings.VERIFY_REQUESTS)
+        if len(postal_addresses) != 1:
+            logger.error("Provided Billing Account does not contain a Postal Address")
+            raise OrderingError("Provided Billing Account does not contain a Postal Address")
 
-        #     if r.status_code != 200:
-        #         logger.error("Status code `{r.status_code}` at the time of retrieving the Billing Address")
-        #         raise OrderingError("There was an error at the time of retrieving the Billing Address")
+        postal_address = postal_addresses[0]["characteristic"]
 
-        #     return r.json()
-
-        # site = urlparse(settings.SITE)
-
-        # billing_url = urlparse(items[0]["billingAccount"][0]["href"])
-
-        # billing_local = urlparse(settings.BILLING)
-
-        # billing_account = _download_asset(
-        #     "{}://{}{}".format(billing_local.scheme, billing_local.netloc, billing_url.path)
-        # )
-
-        # customer_acc_url = urlparse(billing_account["customerAccount"]["href"])
-        # customer_account = _download_asset(
-        #     "{}://{}{}".format(billing_local.scheme, billing_local.netloc, customer_acc_url.path)
-        # )
-
-        # customer_url = urlparse(customer_account["customer"]["href"])
-        # customer = _download_asset("{}://{}{}".format(billing_local.scheme, billing_local.netloc, customer_url.path))
-
-        # postal_addresses = [
-        #     contactMedium for contactMedium in customer["contactMedium"] if contactMedium["type"] == "PostalAddress"
-        # ]
-
-        # if len(postal_addresses) != 1:
-        #     logger.error("Provided Billing Account does not contain a Postal Address")
-        #     raise OrderingError("Provided Billing Account does not contain a Postal Address")
-
-        # postal_address = postal_addresses[0]["medium"]
-
-        # return {
-        #     "street": postal_address["streetOne"] + "\n" + postal_address.get("streetTwo", ""),
-        #     "postal": postal_address["postcode"],
-        #     "city": postal_address["city"],
-        #     "province": postal_address["stateOrProvince"],
-        #     "country": postal_address["country"],
-        # }
-
-        # TODO: Add billing address
         return {
-            "street": "",
-            "postal": "",
-            "city": "",
-            "province": "",
-            "country": "",
+            "street": postal_address["street1"] + "\n" + postal_address.get("street2", ""),
+            "postal": postal_address["postCode"],
+            "city": postal_address["city"],
+            "province": postal_address["stateOrProvince"],
+            "country": postal_address["country"],
         }
 
-    def _process_add_items(self, items, order_id, description, terms_accepted):
+    def _process_add_items(self, items, order_id, description, terms_accepted, billing_account):
         new_contracts = [self._build_contract(item) for item in items]
 
         terms_found = False
@@ -332,7 +300,7 @@ class OrderingManager:
             owner_organization=current_org,
             date=datetime.utcnow(),
             state="pending",
-            tax_address=self._get_billing_address(items),
+            tax_address=self._get_billing_address(billing_account),
             contracts=new_contracts,
             description=description,
         )
@@ -434,12 +402,6 @@ class OrderingManager:
 
         self._customer = customer
 
-        # Check initial state of the order. It must be Acknowledged
-        # TODO: Check if this is still necesary as the order has been already set as inProgress
-        # if order["state"].lower() != "acknowledged":
-        #     logger.error("Only acknowledged orders can be initially processed")
-        #     raise OrderingError("Only acknowledged orders can be initially processed")
-
         # Classify order items by action
         items = {"add": [], "modify": [], "delete": [], "no_change": []}
         for item in order["productOrderItem"]:
@@ -463,7 +425,7 @@ class OrderingManager:
             if "description" in order:
                 description = order["description"]
 
-            redirection_url = self._process_add_items(items["add"], order["id"], description, terms_accepted)
+            redirection_url = self._process_add_items(items["add"], order["id"], description, terms_accepted, order["billingAccount"])
 
         return redirection_url
 
