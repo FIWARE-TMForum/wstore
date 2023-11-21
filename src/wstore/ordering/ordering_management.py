@@ -432,13 +432,65 @@ class OrderingManager:
     def notify_completed(self, order):
         # Process product order items to instantiate the inventory
         for orderItem in order["productOrderItem"]:
+            # Get product specification
+            # TODO: Add service and resource candidates to the product offering
+            catalog = urlparse(settings.CATALOG)
+
+            offering_id = orderItem["productOffering"]["href"]
+            offering_url = "{}://{}{}/{}".format(catalog.scheme, catalog.netloc, catalog.path + '/productOffering', offering_id)
+
+            offering_info = self._download(offering_url, "product offering", orderItem["id"])
+
+            resources = []
+            services = []
+            inventory_client = InventoryClient()
+
             product = orderItem["product"]
+
+            customer_party = None
+            for party in product["relatedParty"]:
+                if party["role"].lower() == "customer":
+                    customer_party = party
+                    break
+
+            # Instantiate services and resources if needed
+            if "productSpecification" in offering_info:
+                spec_id = offering_info["productSpecification"]["id"]
+                spec_url = "{}://{}{}/{}".format(catalog.scheme, catalog.netloc, catalog.path + '/productSpecification', spec_id)
+
+                spec_info = self._download(spec_url, "product specification", orderItem["id"])
+
+                if "resourceSpecification" in spec_info:
+                    # Create resources in the inventory
+                    resources = [inventory_client.create_resource(resource["id"], customer_party) for resource in spec_info["resourceSpecification"]]
+
+                if "serviceSpecification" in spec_info:
+                    # Create services in the inventory
+                    services = [inventory_client.create_service(service["id"], customer_party) for service in spec_info["serviceSpecification"]]
 
             product["name"] = "oid={}".format(order["id"])
             product["status"] = "created"
             product["productOffering"] = orderItem["productOffering"]
 
-            inventory_client = InventoryClient()
+            product["realizingResource"] = [{
+                "id": resource,
+                "href": resource
+            } for resource in resources]
+
+            # This cannot work until the Service Intentory API is published
+            if "productCharacteristic" not in product:
+                product["productCharacteristic"] = []
+
+            product["productCharacteristic"].extend([{
+                "name": "service",
+                "value": service
+            }] for service in services)
+
+            # product["realizingService"] = [{
+            #     "id": service,
+            #     "href": service
+            # } for service in services]
+
             new_product = inventory_client.create_product(product)
 
             self.activate_product(order["id"], new_product)

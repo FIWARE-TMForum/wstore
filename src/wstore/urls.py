@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2013 CoNWeT Lab., Universidad Politécnica de Madrid
 # Copyright (c) 2021 Future Internet Consulting and Development Solutions S.L.
 
 # This file belongs to the business-charging-backend
@@ -29,8 +29,18 @@ from wstore.charging_engine.accounting import views as accounting_views
 from wstore.ordering import views as ordering_views
 from wstore.reports import views as reports_views
 from wstore.rss import views as rss_views
+from wstore.service import views as service_views
 
 urlpatterns = [
+    # FIXME: Workaround for saving services while the service inventory API is implemented
+    url(
+        r"^service/?$",
+        service_views.ServiceCollection(permitted_methods=("GET",)),
+    ),
+    url(
+        r"^service/(?P<service_id>.+)/?$",
+        service_views.ServiceEntry(permitted_methods=("GET",)),
+    ),
     # API
     url(
         r"^charging/api/assetManagement/assets/?$",

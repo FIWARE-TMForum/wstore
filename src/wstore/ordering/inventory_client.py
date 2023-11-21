@@ -21,7 +21,8 @@
 
 
 from datetime import datetime
-from urllib.parse import urljoin
+from uuid import uuid4
+from urllib.parse import urljoin, urlparse
 
 import requests
 from django.conf import settings
@@ -148,3 +149,80 @@ class InventoryClient:
         response.raise_for_status()
 
         return response.json()
+
+    ####
+    def download_spec(self, catalog_endpoint, spec_path, spec_id):
+        catalog = urlparse(catalog_endpoint)
+        resource_spec_url = "{}://{}{}/{}".format(catalog.scheme, catalog.netloc, catalog.path + spec_path, spec_id)
+
+        resp = requests.get(resource_spec_url, verify=settings.VERIFY_REQUESTS)
+        return resp.json()
+
+    def build_inventory_char(self, spec_char, value_field):
+        value = None
+        for val in spec_char[value_field]:
+            if val["isDefault"]:
+                if "valueFrom" in val:
+                    value = str(val["valueFrom"]) + " - " + str(val["valueTo"])
+                else:
+                    value = str(val["value"])
+
+                if "unitOfMeasure" in val:
+                    value += " " + val["unitOfMeasure"]
+
+        return {
+            "id": "urn:ngsi-ld:characteristic:{}".format(str(uuid4())),
+            "name": spec_char["name"],
+            "valueType": "string",
+            "value": value
+        }
+
+    def create_resource(self, resource_id, customer_party):
+        # Get resource specification        
+        resource_spec = self.download_spec(settings.RESOURCE_CATALOG, '/resourceSpecification', resource_id)
+
+        resource = {
+            "resourceCharacteristic": [self.build_inventory_char(char, "resourceSpecCharacteristicValue") for char in resource_spec["resourceSpecCharacteristic"]],
+            "relatedParty": [customer_party],
+            "resourceStatus": "reserved",
+            "startOperatingDate": datetime.now().isoformat() + "Z"
+        }
+
+        if "name" in resource_spec:
+            resource["name"] = resource_spec["name"]
+
+        if "description" in resource_spec:
+            resource["description"] = resource_spec["description"]
+
+        inventory = urlparse(settings.RESOURCE_INVENTORY)
+        resource_url = "{}://{}{}".format(inventory.scheme, inventory.netloc, inventory.path + '/resource')
+
+        inv_response = requests.post(resource_url, json=resource, verify=settings.VERIFY_REQUESTS)
+        inv_resource = inv_response.json()
+
+        return inv_resource["id"]
+
+    def create_service(self, service_id, customer_party):
+        # Get service specification
+        service_spec = self.download_spec(settings.SERVICE_CATALOG, '/serviceSpecification', service_id)
+
+        # TODO: Replace this code when the service inventory is available
+        from wstore.service.models import Service
+
+        inv_service_id = 'urn:ngsi-ld:Service:{}'.format(str(uuid4()))
+        service = Service(
+            uuid = inv_service_id,
+            startDate = datetime.now(),
+            party_id = customer_party["id"],
+            state = "reserved",
+            characteristics = [self.build_inventory_char(char, "characteristicValueSpecification") for char in service_spec["specCharacteristic"]]
+        )
+
+        if "name" in service_spec:
+            service.name = service_spec["name"]
+
+        if "description" in service_spec:
+            service.description = service_spec["description"]
+
+        service.save()
+        return inv_service_id

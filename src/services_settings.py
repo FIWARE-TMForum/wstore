@@ -26,7 +26,13 @@ SITE = "http://proxy.docker:8004/"
 LOCAL_SITE = "http://charging.docker:8006/"
 
 CATALOG = "http://host.docker.internal:8632"
+RESOURCE_CATALOG = "http://host.docker.internal:8636"
+SERVICE_CATALOG = "http://host.docker.internal:8637"
+
 INVENTORY = "http://host.docker.internal:8635"
+RESOURCE_INVENTORY = "http://host.docker.internal:8641"
+SERVICE_INVENTORY = "http://host.docker.internal:8640"
+
 ORDERING = "http://host.docker.internal:8634"
 BILLING = "http://host.docker.internal:8639"
 USAGE = "http://host.docker.internal:8637"
