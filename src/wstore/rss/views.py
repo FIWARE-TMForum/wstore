@@ -6,6 +6,7 @@ from wstore.store_commons.resource import Resource as APIResource
 from wstore.rss.models import RSSModel, CDR
 from wstore.rss.algorithms.rss_algorithm import RSS_ALGORITHMS
 from wstore.store_commons.utils.json_encoder import CustomEncoder
+from wstore.rss.settlement import SettlementThread
 
 from django.core.exceptions import ValidationError
 from django.core.exceptions import ObjectDoesNotExist
@@ -31,8 +32,8 @@ class RevenueSharingModels(APIResource):
                             "providerId",
                             "productClass",
                             "algorithmType",
-                            "ownerValue",
-                            "aggregatorValue",
+                            "providerShare",
+                            "aggregatorShare",
                             "stakeholders",
                         ],
                     ),
@@ -55,8 +56,8 @@ class RevenueSharingModels(APIResource):
             data = json.loads(request.body)
             model = RSSModel.objects.get(providerId=data["providerId"], productClass=data["productClass"])
             model.algorithmType = data.get("algorithmType", model.algorithmType)
-            model.ownerValue = data.get("ownerValue", model.ownerValue)
-            model.aggregatorValue = data.get("aggregatorValue", model.aggregatorValue)
+            model.providerShare = data.get("providerShare", model.providerShare)
+            model.aggregatorShare = data.get("aggregatorShare", model.aggregatorShare)
             model.stakeholders = data.get("stakeholders", model.stakeholders)
 
             model.save(update_fields=data.keys())
@@ -68,8 +69,8 @@ class RevenueSharingModels(APIResource):
                             "providerId",
                             "productClass",
                             "algorithmType",
-                            "ownerValue",
-                            "aggregatorValue",
+                            "providerShare",
+                            "aggregatorShare",
                             "stakeholders",
                         ],
                     ),
@@ -132,23 +133,46 @@ class Settlements(APIResource):
     @supported_request_mime_types(("application/json",))
     @authentication_required
     def create(self, request):
-        ...
-        # PSEUDO CODE
-        # IN SEPARATE THREAD
-        # providers = getProviders()
-        # for provider in providers:
-        #     for model in provider.getModels():
-        #         transactions = getTransactions(Model)
-        #         if transactions:
-        #             setTransactionsState(transactions, "processing")
-        #             runTask(settlementTask, transactions)
+        try:
+            data = json.loads(request.body)
+            SettlementThread(data["providerId"], data["productClass"]).start()
+            return HttpResponse(
+                "Settlement for {data[productClass]} of {data[providerId]} lauched successfully", status=202
+            )
+
+        except:
+            logger.error("Error launching settlement")
+            error = 400, "Bad request"
+
+        return build_response(request, *error)
 
 
 class SettlementReports(APIResource):
-    ...
+    @authentication_required
+    def read(self, request):
+        try:
+            query_offset = int(request.GET.get("offset", 0))
+            query_end = query_offset + int(request.GET.get("size", 10))
+            models = list(
+                RSSModel.objects.filter(
+                    **{param: request.GET[param] for param in ("productClass", "providerId") if param in request.GET}
+                )[query_offset:query_end].values()
+            )
+            return HttpResponse(
+                json.dumps(models, cls=CustomEncoder),
+                status=200,
+                content_type="application/json; charset=utf-8",
+            )
+
+        except Exception as e:
+            logger.error(f"Couldn't return settlement reports: \n{e}")
+            error = 400, "Bad request"
+
+        return build_response(request, *error)
 
 
 class CDRs(APIResource):
+    @authentication_required
     def read(self, request):
         try:
             query_offset = int(request.GET.get("offset", 0))

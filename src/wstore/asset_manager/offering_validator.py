@@ -135,7 +135,9 @@ class OfferingValidator(CatalogValidator):
                 if price_model["priceType"] == "recurring" and not ChargePeriod.contains(
                     price_model["recurringChargePeriodType"]
                 ):
-                    raise ValueError("Unrecognized recurringChargePeriodType: " + price_model["recurringChargePeriodType"])
+                    raise ValueError(
+                        "Unrecognized recurringChargePeriodType: " + price_model["recurringChargePeriodType"]
+                    )
 
                 # Validate currency
                 if "price" not in price_model:

@@ -10,25 +10,14 @@ from parameterized import parameterized
 from wstore.charging_engine.accounting import usage_client
 from wstore.charging_engine.accounting.errors import UsageError
 
-#./manage.py test wstore.charging_engine.accounting.integration_t_usage
+# ./manage.py test wstore.charging_engine.accounting.integration_t_usage
 
-EMPTY_USAGE = {
-}
+EMPTY_USAGE = {}
 
-EMPTY_USAGE_SPECIFICATION = {
-}
+EMPTY_USAGE_SPECIFICATION = {}
 
 PARTY_USAGE = {
-    "relatedParty": [
-        {
-            "id": "1",
-            "name": "string"
-        },
-        {
-            "id": "1",
-            "name": "string"
-        }
-    ],
+    "relatedParty": [{"id": "1", "name": "string"}, {"id": "1", "name": "string"}],
 }
 
 
@@ -47,26 +36,19 @@ class UsageClientTestCase(TestCase):
         usage_client.settings.INVENTORY = self._old_inv
 
     def _addIdHref(self, gson, returned):
-        print(returned['id'])
+        print(returned["id"])
 
-        gson["id"] = returned['id']
-        gson["href"] = returned['href']
+        gson["id"] = returned["id"]
+        gson["href"] = returned["href"]
 
-    @parameterized.expand(
-        [
-            ("empty usage", EMPTY_USAGE, EMPTY_USAGE)
-        ]
-    )
-
+    @parameterized.expand([("empty usage", EMPTY_USAGE, EMPTY_USAGE)])
     def test_create_usage(self, name, response, exp_resp):
-        
         client = usage_client.UsageClient()
         created_usage = client.create_usage(response)
         self._addIdHref(exp_resp, created_usage)
         self.assertEquals(exp_resp, created_usage)
 
     def _test_patch(self, expected_json, method, args):
-
         method(*args)
 
         # Verify calls
@@ -75,59 +57,29 @@ class UsageClientTestCase(TestCase):
             json=expected_json,
         )
 
-    @parameterized.expand(
-        [
-            ("empty usage", EMPTY_USAGE, EMPTY_USAGE)
-        ]
-    )
-
+    @parameterized.expand([("empty usage", EMPTY_USAGE, EMPTY_USAGE)])
     def test_update_usage_state(self, name, response, exp_resp):
-
         client = usage_client.UsageClient()
         created_usage = client.create_usage(response)
 
         status = "rated"
         expected_json = {"status": status}
-        client.update_usage_state(created_usage['id'], status)
+        client.update_usage_state(created_usage["id"], status)
 
-        #The update works, but it does not return anything so no 
+        # The update works, but it does not return anything so no
 
-
-    @parameterized.expand(
-        [
-            ("empty usageSpecification", EMPTY_USAGE_SPECIFICATION, EMPTY_USAGE_SPECIFICATION)
-        ]
-    )
-
+    @parameterized.expand([("empty usageSpecification", EMPTY_USAGE_SPECIFICATION, EMPTY_USAGE_SPECIFICATION)])
     def test_create_usageSpecification(self, name, response, exp_resp):
-
         client = usage_client.UsageClient()
         created_usage_specification = client.create_usage_spec(response)
         self._addIdHref(exp_resp, created_usage_specification)
         self.assertEquals(exp_resp, created_usage_specification)
 
-    @parameterized.expand(
-        [
-            ("empty usageSpecification", EMPTY_USAGE_SPECIFICATION, EMPTY_USAGE_SPECIFICATION)
-        ]
-    )
-
+    @parameterized.expand([("empty usageSpecification", EMPTY_USAGE_SPECIFICATION, EMPTY_USAGE_SPECIFICATION)])
     def test_delete_usageSpecification(self, name, response, exp_resp):
-
         client = usage_client.UsageClient()
         created_usage_specification = client.create_usage_spec(response)
         self._addIdHref(exp_resp, created_usage_specification)
         client.delete_usage_spec(created_usage_specification["id"])
 
-        #Not return or retrieve on usage_client so no assert but it works
-
-
-        
-
-
-
-    
-
-
-
-        
+        # Not return or retrieve on usage_client so no assert but it works

@@ -18,9 +18,14 @@ class RSSAlgorithm(ABC):
     @abstractmethod
     def calculate_revenue_share(cls, rs_model, total_revenue):
         """
-        args:
+        Args:
             rs_model (RSSModel): The model to use for calculating the revenue share.
             total_revenue (Decimal): The total ammount to divide.
+
+        Returns:
+            dict: A dictionary representing an RSS Report (see RSS models) without
+            currency or timestamp. For ease of implementation, you may return additional fields,
+            in the main dictionary but not in nested fields like `stakeholders`.
         """
         ...
 

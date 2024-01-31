@@ -238,8 +238,8 @@ class ChargingEngine:
             valid_from, valid_to = self.end_processors[concept](contract, transaction)
 
             # If the customer has been charged create the CDR
-            #cdr_manager = CDRManager(self._order, contract)
-            #cdr_manager.generate_cdr(transaction["related_model"], time_stamp.isoformat() + "Z")
+            # cdr_manager = CDRManager(self._order, contract)
+            # cdr_manager.generate_cdr(transaction["related_model"], time_stamp.isoformat() + "Z")
 
             # Generate the invoice
             invoice_path = ""

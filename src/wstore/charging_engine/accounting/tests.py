@@ -334,10 +334,7 @@ class UsageClientTestCase(TestCase):
 
         # Verify calls
         usage_client.requests.get.assert_called_once_with(
-            usage_client.settings.USAGE
-            + "/usage?relatedParty.id="
-            + self._customer
-            + extra_query,
+            usage_client.settings.USAGE + "/usage?relatedParty.id=" + self._customer + extra_query,
             headers={"Accept": "application/json"},
         )
 
@@ -538,5 +535,5 @@ class SDRCollectionTestCase(TestCase):
                 views.UsageClient().update_usage_state.assert_called_once_with("1", "guided")
                 self._manager_inst.update_usage.assert_called_once_with()
             else:
-                views.UsageClient().update_usage_state.assert_called_once_with("1",  "rejected")
+                views.UsageClient().update_usage_state.assert_called_once_with("1", "rejected")
                 self.assertEquals(0, self._manager_inst.update_usage.call_count)
