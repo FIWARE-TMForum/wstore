@@ -63,7 +63,7 @@ def createReport(ids, owner=1, stakeholders=None):
         stakeholders = []
     return {
         "id": ids,
-        "ownerProviderId": createMail(owner),
+        "providerId": createMail(owner),
         "stakeholders": [{"stakeholderId": createMail(x)} for x in stakeholders],
     }
 
@@ -532,14 +532,14 @@ class PayoutEngineTestCase(TestCase):
                 "paid": True,
                 "id": 1,
                 "currency": "EUR",
-                "ownerProviderId": createMail(1),
+                "providerId": createMail(1),
                 "stakeholders": [],
             },
             {
                 "paid": True,
                 "id": 2,
                 "currency": "EUR",
-                "ownerProviderId": createMail(2),
+                "providerId": createMail(2),
                 "stakeholders": [],
             },
         ]
@@ -561,8 +561,8 @@ class PayoutEngineTestCase(TestCase):
                 "paid": False,
                 "id": 1,
                 "currency": "EUR",
-                "ownerProviderId": createMail(1),
-                "ownerValue": 10,
+                "providerId": createMail(1),
+                "providerTotal": 10,
                 "stakeholders": [],
             }
         ]
@@ -595,16 +595,16 @@ class PayoutEngineTestCase(TestCase):
                 "paid": False,
                 "id": 1,
                 "currency": currencies[0],
-                "ownerProviderId": createMail(1),
-                "ownerValue": 10,
+                "providerId": createMail(1),
+                "providerTotal": 10,
                 "stakeholders": [],
             },
             {
                 "paid": False,
                 "id": 2,
                 "currency": currencies[1],
-                "ownerProviderId": createMail(1),
-                "ownerValue": 20,
+                "providerId": createMail(1),
+                "providerTotal": 20,
                 "stakeholders": [],
             },
         ]
@@ -624,20 +624,20 @@ class PayoutEngineTestCase(TestCase):
                 "paid": False,
                 "id": 1,
                 "currency": "EUR",
-                "ownerProviderId": createMail(1),
-                "ownerValue": 10,
+                "providerId": createMail(1),
+                "providerTotal": 10,
                 "stakeholders": [
-                    {"stakeholderId": createMail(2), "modelValue": 2},
-                    {"stakeholderId": createMail(3), "modelValue": 4},
+                    {"stakeholderId": createMail(2), "stakeholderTotal": 2},
+                    {"stakeholderId": createMail(3), "stakeholderTotal": 4},
                 ],
             },
             {
                 "paid": False,
                 "id": 2,
                 "currency": "EUR",
-                "ownerProviderId": createMail(2),
-                "ownerValue": 20,
-                "stakeholders": [{"stakeholderId": createMail(1), "modelValue": 10}],
+                "providerId": createMail(2),
+                "providerTotal": 20,
+                "stakeholders": [{"stakeholderId": createMail(1), "stakeholderTotal": 10}],
             },
         ]
 
@@ -671,8 +671,8 @@ class PayoutEngineTestCase(TestCase):
                 "paid": False,
                 "id": 1,
                 "currency": "EUR",
-                "ownerProviderId": createMail(1),
-                "ownerValue": 10,
+                "providerId": createMail(1),
+                "providerTotal": 10,
                 "stakeholders": [],
             }
         ]
@@ -693,11 +693,11 @@ class PayoutEngineTestCase(TestCase):
                 "paid": False,
                 "id": 1,
                 "currency": "EUR",
-                "ownerProviderId": createMail(1),
-                "ownerValue": 10,
+                "providerId": createMail(1),
+                "providerTotal": 10,
                 "stakeholders": [
-                    {"stakeholderId": createMail(2), "modelValue": 5},
-                    {"stakeholderId": createMail(3), "modelValue": 5},
+                    {"stakeholderId": createMail(2), "stakeholderTotal": 5},
+                    {"stakeholderId": createMail(3), "stakeholderTotal": 5},
                 ],
             }
         ]

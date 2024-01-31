@@ -162,7 +162,7 @@ class PayoutWatcher(threading.Thread):
                 continue
 
             report = filtered[0]
-            reportmails = [User.objects.get(username=report["ownerProviderId"]).email]
+            reportmails = [User.objects.get(username=report["providerId"]).email]
             reportmails.extend(
                 [User.objects.get(username=stake["stakeholderId"]).email for stake in report.get("stakeholders", [])]
             )
@@ -271,16 +271,16 @@ class PayoutEngine:
                 pass
 
             currency = report["currency"]
-            usermail = User.objects.get(username=report["ownerProviderId"]).email
+            usermail = User.objects.get(username=report["providerId"]).email
 
             if semipaid is None or usermail not in semipaid.success:
-                new_reports[currency][usermail].append((report["ownerValue"], report["id"]))
+                new_reports[currency][usermail].append((report["providerTotal"], report["id"]))
 
             for stake in report["stakeholders"]:
                 stakemail = User.objects.get(username=stake["stakeholderId"]).email
 
                 if semipaid is None or stakemail not in semipaid.success:
-                    new_reports[currency][stakemail].append((stake["modelValue"], report["id"]))
+                    new_reports[currency][stakemail].append((stake["stakeholderTotal"], report["id"]))
 
         return new_reports
 

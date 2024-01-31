@@ -61,7 +61,9 @@ class OrderingManager:
         catalog = urlparse(settings.CATALOG)
 
         offering_id = item["productOffering"]["href"]
-        offering_url = "{}://{}{}/{}".format(catalog.scheme, catalog.netloc, catalog.path + '/productOffering', offering_id)
+        offering_url = "{}://{}{}/{}".format(
+            catalog.scheme, catalog.netloc, catalog.path + "/productOffering", offering_id
+        )
 
         offering_info = self._download(offering_url, "product offering", item["id"])
 
@@ -105,7 +107,7 @@ class OrderingManager:
             "value": value,
             "unit": price[unit_field[price["priceType"].lower()]].lower(),
             "tax_rate": tax_rate,
-            "duty_free": duty_free
+            "duty_free": duty_free,
         }
 
     def _parse_alteration(self, alteration, type_):
@@ -131,7 +133,7 @@ class OrderingManager:
 
         # Parse condition
         if "priceCondition" in alteration and len(alteration["priceCondition"]):
-            exp = re.compile("^(eq|lt|gt|le|ge) \d+(\.\d+)?$")
+            exp = re.compile(r"^(eq|lt|gt|le|ge) \d+(\.\d+)?$")
 
             if not exp.match(alteration["priceCondition"]):
                 logger.error(
@@ -157,7 +159,9 @@ class OrderingManager:
             if off_price["id"] == product_price["productOfferingPrice"]["id"]:
                 # Download the product offering price model
                 catalog = urlparse(settings.CATALOG)
-                price_url = "{}://{}{}/{}".format(catalog.scheme, catalog.netloc, catalog.path + '/productOfferingPrice', off_price["id"])
+                price_url = "{}://{}{}/{}".format(
+                    catalog.scheme, catalog.netloc, catalog.path + "/productOfferingPrice", off_price["id"]
+                )
                 offering_pricing = self._download(price_url, "product offering price", off_price["id"])
 
                 break
@@ -170,20 +174,37 @@ class OrderingManager:
             )
 
         # Validate that all pricing fields match
-        if (offering_pricing["priceType"].lower() != product_price["priceType"].lower()
-                or (field_included(offering_pricing, "unitOfMeasure") and not field_included(product_price, "unitOfMeasure"))
-                or (not field_included(offering_pricing, "unitOfMeasure") and field_included(product_price, "unitOfMeasure"))
-                or (field_included(offering_pricing, "unitOfMeasure") and field_included(product_price, "unitOfMeasure")
-                    and offering_pricing["unitOfMeasure"]["units"].lower() != product_price["unitOfMeasure"].lower())
-
-                or (field_included(offering_pricing, "recurringChargePeriodType") and not field_included(product_price, "recurringChargePeriod"))
-                or (not field_included(offering_pricing, "recurringChargePeriodType") and field_included(product_price, "recurringChargePeriod"))
-                or (field_included(offering_pricing, "recurringChargePeriodType") and field_included(product_price, "recurringChargePeriod")
-                    and offering_pricing["recurringChargePeriodType"].lower() != product_price["recurringChargePeriod"].lower())
-
-                or Decimal(offering_pricing["price"]["value"]) != Decimal(product_price["price"]["taxIncludedAmount"]["value"])
-                or offering_pricing["price"]["unit"].lower() != product_price["price"]["taxIncludedAmount"]["unit"].lower()):
-
+        if (
+            offering_pricing["priceType"].lower() != product_price["priceType"].lower()
+            or (
+                field_included(offering_pricing, "unitOfMeasure") and not field_included(product_price, "unitOfMeasure")
+            )
+            or (
+                not field_included(offering_pricing, "unitOfMeasure") and field_included(product_price, "unitOfMeasure")
+            )
+            or (
+                field_included(offering_pricing, "unitOfMeasure")
+                and field_included(product_price, "unitOfMeasure")
+                and offering_pricing["unitOfMeasure"]["units"].lower() != product_price["unitOfMeasure"].lower()
+            )
+            or (
+                field_included(offering_pricing, "recurringChargePeriodType")
+                and not field_included(product_price, "recurringChargePeriod")
+            )
+            or (
+                not field_included(offering_pricing, "recurringChargePeriodType")
+                and field_included(product_price, "recurringChargePeriod")
+            )
+            or (
+                field_included(offering_pricing, "recurringChargePeriodType")
+                and field_included(product_price, "recurringChargePeriod")
+                and offering_pricing["recurringChargePeriodType"].lower()
+                != product_price["recurringChargePeriod"].lower()
+            )
+            or Decimal(offering_pricing["price"]["value"])
+            != Decimal(product_price["price"]["taxIncludedAmount"]["value"])
+            or offering_pricing["price"]["unit"].lower() != product_price["price"]["taxIncludedAmount"]["unit"].lower()
+        ):
             logger.error("Product price does not match any prices in offering")
             raise OrderingError(
                 f"The product price included in orderItem {item_id} "
@@ -246,7 +267,7 @@ class OrderingManager:
         return Contract(
             item_id=item["id"],
             pricing_model=pricing,
-            #revenue_class=revenue_class,
+            # revenue_class=revenue_class,
             offering=offering.pk,
         )
 
@@ -258,12 +279,12 @@ class OrderingManager:
             account = billing_client.get_billing_account(billing_account["id"])
         except Exception as e:
             logger.error("Error retriving billing account {}".format(str(e)))
-            raise OrderingError(
-                "Invalid billing account, billing account could not be loaded"
-            )
+            raise OrderingError("Invalid billing account, billing account could not be loaded")
 
         postal_addresses = [
-            contactMedium for contactMedium in account["contact"][0]["contactMedium"] if contactMedium["mediumType"] == "PostalAddress"
+            contactMedium
+            for contactMedium in account["contact"][0]["contactMedium"]
+            if contactMedium["mediumType"] == "PostalAddress"
         ]
 
         if len(postal_addresses) != 1:
@@ -425,7 +446,9 @@ class OrderingManager:
             if "description" in order:
                 description = order["description"]
 
-            redirection_url = self._process_add_items(items["add"], order["id"], description, terms_accepted, order["billingAccount"])
+            redirection_url = self._process_add_items(
+                items["add"], order["id"], description, terms_accepted, order["billingAccount"]
+            )
 
         return redirection_url
 
@@ -437,7 +460,9 @@ class OrderingManager:
             catalog = urlparse(settings.CATALOG)
 
             offering_id = orderItem["productOffering"]["href"]
-            offering_url = "{}://{}{}/{}".format(catalog.scheme, catalog.netloc, catalog.path + '/productOffering', offering_id)
+            offering_url = "{}://{}{}/{}".format(
+                catalog.scheme, catalog.netloc, catalog.path + "/productOffering", offering_id
+            )
 
             offering_info = self._download(offering_url, "product offering", orderItem["id"])
 
@@ -456,35 +481,37 @@ class OrderingManager:
             # Instantiate services and resources if needed
             if "productSpecification" in offering_info:
                 spec_id = offering_info["productSpecification"]["id"]
-                spec_url = "{}://{}{}/{}".format(catalog.scheme, catalog.netloc, catalog.path + '/productSpecification', spec_id)
+                spec_url = "{}://{}{}/{}".format(
+                    catalog.scheme, catalog.netloc, catalog.path + "/productSpecification", spec_id
+                )
 
                 spec_info = self._download(spec_url, "product specification", orderItem["id"])
 
                 if "resourceSpecification" in spec_info:
                     # Create resources in the inventory
-                    resources = [inventory_client.create_resource(resource["id"], customer_party) for resource in spec_info["resourceSpecification"]]
+                    resources = [
+                        inventory_client.create_resource(resource["id"], customer_party)
+                        for resource in spec_info["resourceSpecification"]
+                    ]
 
                 if "serviceSpecification" in spec_info:
                     # Create services in the inventory
-                    services = [inventory_client.create_service(service["id"], customer_party) for service in spec_info["serviceSpecification"]]
+                    services = [
+                        inventory_client.create_service(service["id"], customer_party)
+                        for service in spec_info["serviceSpecification"]
+                    ]
 
             product["name"] = "oid={}".format(order["id"])
             product["status"] = "created"
             product["productOffering"] = orderItem["productOffering"]
 
-            product["realizingResource"] = [{
-                "id": resource,
-                "href": resource
-            } for resource in resources]
+            product["realizingResource"] = [{"id": resource, "href": resource} for resource in resources]
 
             # This cannot work until the Service Intentory API is published
             if "productCharacteristic" not in product:
                 product["productCharacteristic"] = []
 
-            product["productCharacteristic"].extend([{
-                "name": "service",
-                "value": service
-            }] for service in services)
+            product["productCharacteristic"].extend([{"name": "service", "value": service}] for service in services)
 
             # product["realizingService"] = [{
             #     "id": service,

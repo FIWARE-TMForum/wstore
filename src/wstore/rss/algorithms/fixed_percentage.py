@@ -14,9 +14,10 @@ class FixedPercentage(RSSAlgorithm):
             rs_model (RSSModel): The model to use for calculating the revenue share.
             total_revenue (Decimal): The total ammount to divide.
         """
-        result = model_to_dict(rs_model)
-        result["aggregatorShare"] = total_revenue * result["aggregatorValue"] / 100
-        result["ownerShare"] = total_revenue * result["ownerValue"] / 100
-        for stakeholder in rs_model.stakeholders:
-            stakeholder["stakeholderShare"] = total_revenue * stakeholder["stakeholderValue"] / 100
+        result = model_to_dict(rs_model, fields=["providerId", "productClass", "stakeholders", "algorithmType"])
+        result["aggregatorTotal"] = total_revenue * rs_model.aggregatorShare / 100
+        result["providerTotal"] = total_revenue * rs_model.providerShare / 100
+        for stakeholder in result["stakeholders"]:
+            stakeholder["stakeholderTotal"] = total_revenue * stakeholder["stakeholderShare"] / 100
+            stakeholder.pop("stakeholderShare", None)
         return result
