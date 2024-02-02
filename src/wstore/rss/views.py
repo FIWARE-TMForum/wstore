@@ -3,7 +3,7 @@ from logging import getLogger
 
 from wstore.store_commons.utils.http import authentication_required, build_response, supported_request_mime_types
 from wstore.store_commons.resource import Resource as APIResource
-from wstore.rss.models import RSSModel, CDR
+from wstore.rss.models import RSSModel, CDR, SettlementReport
 from wstore.rss.algorithms.rss_algorithm import RSS_ALGORITHMS
 from wstore.store_commons.utils.json_encoder import CustomEncoder
 from wstore.rss.settlement import SettlementThread
@@ -154,7 +154,7 @@ class SettlementReports(APIResource):
             query_offset = int(request.GET.get("offset", 0))
             query_end = query_offset + int(request.GET.get("size", 10))
             models = list(
-                RSSModel.objects.filter(
+                SettlementReport.objects.filter(
                     **{param: request.GET[param] for param in ("productClass", "providerId") if param in request.GET}
                 )[query_offset:query_end].values()
             )
