@@ -71,7 +71,7 @@ class OrderingCollectionTestCase(TestCase):
         [
             (
                 "basic",
-                {"id": 1, "orderItem": [{"id": "2"}, {"id": "3"}]},
+                {"id": 1, "productOrderItem": [{"id": "2"}, {"id": "3"}]},
                 None,
                 200,
                 CORRECT_RESP,
@@ -173,24 +173,13 @@ class OrderingCollectionTestCase(TestCase):
 
             if redirect_url is None and not failed:
                 self.assertEquals(
-                    [
-                        call(data, "InProgress"),
-                    ],
-                    views.OrderingClient().update_state.call_args_list,
-                )
-
-                self.assertEquals(
-                    [call(data, "Completed", [{"id": "2"}])],
+                    [call(data, "inProgress"), call(data, "completed", [{"id": "2"}, {"id": "3"}])],
                     views.OrderingClient().update_items_state.call_args_list,
                 )
 
         if failed:
             self.assertEquals(
-                [call(data, "InProgress")],
-                views.OrderingClient().update_state.call_args_list,
-            )
-            self.assertEquals(
-                [call(data, "Failed")],
+                [call(data, "inProgress"), call(data, "failed")],
                 views.OrderingClient().update_items_state.call_args_list,
             )
 
