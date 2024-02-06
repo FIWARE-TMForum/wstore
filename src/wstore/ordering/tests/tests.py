@@ -771,18 +771,18 @@ class OrderingClientTestCase(TestCase):
             (
                 "complete",
                 {
-                    "orderItem": [
-                        {"id": "1", "state": "InProgress"},
-                        {"id": "2", "state": "InProgress"},
+                    "productOrderItem": [
+                        {"id": "1", "state": "inProgress"},
+                        {"id": "2", "state": "inProgress"},
                     ]
                 },
             ),
             (
                 "partial",
                 {
-                    "orderItem": [
+                    "productOrderItem": [
                         {"id": "1", "state": "Acknowledged"},
-                        {"id": "2", "state": "InProgress"},
+                        {"id": "2", "state": "inProgress"},
                     ]
                 },
                 [{"id": "2"}],
@@ -793,19 +793,20 @@ class OrderingClientTestCase(TestCase):
         client = ordering_client.OrderingClient()
         order = {
             "id": "20",
-            "orderItem": [
+            "productOrderItem": [
                 {"id": "1", "state": "Acknowledged"},
                 {"id": "2", "state": "Acknowledged"},
             ],
         }
-        client.update_items_state(order, "InProgress", items)
+        client.update_items_state(order, "inProgress", items)
 
-        ordering_client.requests.patch.assert_called_once_with(
-            "http://localhost:8080/DSProductOrdering/api/productOrdering/v2/productOrder/20",
-            json=expected,
+        self.assertEquals(
+            [call("http://localhost:8080/productOrder/20", json={"state": "inProgress"}),
+             call("http://localhost:8080/productOrder/20", json=expected)],
+            ordering_client.requests.patch.call_args_list,
         )
 
-        self._response.raise_for_status.assert_called_once_with()
+        self.assertEquals([call(), call()], self._response.raise_for_status.call_args_list)
 
     def test_update_state(self):
         client = ordering_client.OrderingClient()
@@ -816,7 +817,7 @@ class OrderingClientTestCase(TestCase):
         client.update_state(order, new_state)
 
         ordering_client.requests.patch.assert_called_once_with(
-            "http://localhost:8080/DSProductOrdering/api/productOrdering/v2/productOrder/" + order["id"],
+            "http://localhost:8080/productOrder/" + order["id"],
             json={"state": new_state},
         )
 
@@ -830,7 +831,7 @@ class OrderingClientTestCase(TestCase):
         self.assertEquals({"id": "1"}, response)
 
         ordering_client.requests.get.assert_called_once_with(
-            "http://localhost:8080/DSProductOrdering/api/productOrdering/v2/productOrder/1"
+            "http://localhost:8080/productOrder/1"
         )
         self._response.raise_for_status.assert_called_once_with()
 
