@@ -916,7 +916,7 @@ class OrderTestCase(TestCase):
         self.assertEquals([self._contract1, self._contract2], contracts)
 
 
-@override_settings(INVENTORY="http://localhost:8080/DSProductInventory")
+@override_settings(INVENTORY="http://localhost:8080")
 class InventoryClientTestCase(TestCase):
     tags = ("inventory",)
 
@@ -957,12 +957,12 @@ class InventoryClientTestCase(TestCase):
         client.create_inventory_subscription()
 
         inventory_client.requests.get.assert_called_once_with(
-            "http://localhost:8080/DSProductInventory/api/productInventory/v2/hub"
+            "http://localhost:8080/hub"
         )
 
         if created:
             inventory_client.requests.post.assert_called_once_with(
-                "http://localhost:8080/DSProductInventory/api/productInventory/v2/hub",
+                "http://localhost:8080/hub",
                 json={"callback": "http://localhost:8004/charging/api/orderManagement/products"},
             )
         else:
@@ -990,8 +990,8 @@ class InventoryClientTestCase(TestCase):
         client.activate_product("1")
 
         inventory_client.requests.patch.assert_called_once_with(
-            "http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1",
-            json={"status": "Active", "startDate": "2016-01-22T04:10:25.176751Z"},
+            "http://localhost:8080/product/1",
+            json={"status": "active", "startDate": "2016-01-22T04:10:25.176751Z"},
         )
         inventory_client.requests.patch().raise_for_status.assert_called_once_with()
 
@@ -1000,8 +1000,8 @@ class InventoryClientTestCase(TestCase):
         client.suspend_product("1")
 
         inventory_client.requests.patch.assert_called_once_with(
-            "http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1",
-            json={"status": "Suspended"},
+            "http://localhost:8080/product/1",
+            json={"status": "suspended"},
         )
         inventory_client.requests.patch().raise_for_status.assert_called_once_with()
 
@@ -1012,16 +1012,16 @@ class InventoryClientTestCase(TestCase):
         self.assertEquals(
             [
                 call(
-                    "http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1",
+                    "http://localhost:8080/product/1",
                     json={
-                        "status": "Active",
+                        "status": "active",
                         "startDate": "2016-01-22T04:10:25.176751Z",
                     },
                 ),
                 call(
-                    "http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1",
+                    "http://localhost:8080/product/1",
                     json={
-                        "status": "Terminated",
+                        "status": "terminated",
                         "terminationDate": "2016-01-22T04:10:25.176751Z",
                     },
                 ),
@@ -1039,7 +1039,7 @@ class InventoryClientTestCase(TestCase):
         client.get_product("1")
 
         inventory_client.requests.get.assert_called_once_with(
-            "http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1"
+            "http://localhost:8080/product/1"
         )
         inventory_client.requests.get().raise_for_status.assert_called_once_with()
 
@@ -1049,7 +1049,7 @@ class InventoryClientTestCase(TestCase):
         products = client.get_products(query=query)
 
         inventory_client.requests.get.assert_called_once_with(
-            "http://localhost:8080/DSProductInventory/api/productInventory/v2/product" + qs
+            "http://localhost:8080/product" + qs
         )
         inventory_client.requests.get().raise_for_status.assert_called_once_with()
 
