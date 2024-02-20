@@ -169,7 +169,7 @@ class OrderingManager:
             # The given price does not match any from the product offering
             logger.error("Product price does not match any prices in offering")
             raise OrderingError(
-                f"The product price included in orderItem {item_id} "
+                f"The product price included in productOrderItem {item_id} "
                 "does not match with any of the prices included in the related offering"
             )
 
@@ -207,7 +207,7 @@ class OrderingManager:
         ):
             logger.error("Product price does not match any prices in offering")
             raise OrderingError(
-                f"The product price included in orderItem {item_id} "
+                f"The product price included in productOrderItem {item_id} "
                 "does not match with any of the prices included in the related offering"
             )
 
@@ -280,6 +280,10 @@ class OrderingManager:
         except Exception as e:
             logger.error("Error retriving billing account {}".format(str(e)))
             raise OrderingError("Invalid billing account, billing account could not be loaded")
+
+        if not "contact" in account or len(account["contact"]) == 0:
+            logger.error("Provided Billing Account does not contain a Postal Address")
+            raise OrderingError("Provided Billing Account does not contain a Postal Address")
 
         postal_addresses = [
             contactMedium
@@ -445,6 +449,9 @@ class OrderingManager:
             description = ""
             if "description" in order:
                 description = order["description"]
+
+            if "billingAccount" not in order:
+                raise OrderingError("Missing billing account in product order")
 
             redirection_url = self._process_add_items(
                 items["add"], order["id"], description, terms_accepted, order["billingAccount"]
