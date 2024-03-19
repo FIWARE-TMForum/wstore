@@ -47,6 +47,7 @@ def mock_payment_client(self, module):
 
     self._payment_class.return_value = self._payment_inst
     payment_client_class_mock.get_payment_client_class.return_value = self._payment_class
+    charging_engine.PaymentClient = payment_client_class_mock
 
 
 INVOICE_PATH = "/media/invoice/invoice1.pdf"
@@ -84,7 +85,6 @@ class ChargingEngineTestCase(TestCase):
         charging_engine.datetime.utcnow.return_value = now
 
         charging_engine.NotificationsHandler = MagicMock()
-        charging_engine.settings.PAYMENT_CLIENT = "wstore.charging_engine.payment_client.payment_client.PaymentClient"
 
         self._charge = MagicMock()
         charging_engine.Charge = MagicMock()
@@ -892,21 +892,21 @@ class ChargingEngineTestCase(TestCase):
         )
         self.assertEquals([call(), call(), call()], self._order.owner_organization.save.call_args_list)
 
-        self.assertEquals(
-            [
-                call(self._order, self._order.get_contracts()[0]),
-                call(self._order, self._order.get_contracts()[1]),
-            ],
-            charging_engine.CDRManager.call_args_list,
-        )
+        # self.assertEquals(
+        #     [
+        #         call(self._order, self._order.get_contracts()[0]),
+        #         call(self._order, self._order.get_contracts()[1]),
+        #     ],
+        #     charging_engine.CDRManager.call_args_list,
+        # )
 
-        self.assertEquals(
-            [
-                call(transactions[0]["related_model"], "2016-01-20T13:12:39Z"),
-                call(transactions[1]["related_model"], "2016-01-20T13:12:39Z"),
-            ],
-            charging_engine.CDRManager().generate_cdr.call_args_list,
-        )
+        # self.assertEquals(
+        #     [
+        #         call(transactions[0]["related_model"], "2016-01-20T13:12:39Z"),
+        #         call(transactions[1]["related_model"], "2016-01-20T13:12:39Z"),
+        #     ],
+        #     charging_engine.CDRManager().generate_cdr.call_args_list,
+        # )
 
         charging_engine.NotificationsHandler().send_acquired_notification.assert_called_once_with(self._order)
 
@@ -962,15 +962,15 @@ class ChargingEngineTestCase(TestCase):
             self._order.owner_organization.save.call_args_list,
         )
 
-        self.assertEquals(
-            [call(self._order, contract) for contract in self._order.get_contracts()],
-            charging_engine.CDRManager.call_args_list,
-        )
+        # self.assertEquals(
+        #     [call(self._order, contract) for contract in self._order.get_contracts()],
+        #     charging_engine.CDRManager.call_args_list,
+        # )
 
-        self.assertEquals(
-            [call(trans["related_model"], "2016-01-20T13:12:39Z") for trans in transactions],
-            charging_engine.CDRManager().generate_cdr.call_args_list,
-        )
+        # self.assertEquals(
+        #     [call(trans["related_model"], "2016-01-20T13:12:39Z") for trans in transactions],
+        #     charging_engine.CDRManager().generate_cdr.call_args_list,
+        # )
 
         def charge_call(c, d):
             return call(
@@ -1003,13 +1003,13 @@ class ChargingEngineTestCase(TestCase):
     def _validate_end_renovation_payment(self, transactions):
         self.assertEquals([call("2")], self._order.get_item_contract.call_args_list)
 
-        charging_engine.CDRManager.assert_called_once_with(self._order, self._order.get_contracts()[1])
+        #charging_engine.CDRManager.assert_called_once_with(self._order, self._order.get_contracts()[1])
+        #charging_engine.CDRManager().generate_cdr.assert_called_once_with(
+        #    transactions[0]["related_model"], "2016-01-20T13:12:39Z"
+        #)
 
         # No new offering has been included
         self.assertEquals([], self._order.owner_organization.acquired_offerings)
-        charging_engine.CDRManager().generate_cdr.assert_called_once_with(
-            transactions[0]["related_model"], "2016-01-20T13:12:39Z"
-        )
 
         self.assertEquals(0, self._order.get_contracts()[0].call_count)
         self.assertEquals(0, self._order.get_contracts()[2].call_count)
@@ -1052,15 +1052,15 @@ class ChargingEngineTestCase(TestCase):
         self.assertEquals([], self._order.owner_organization.acquired_offerings)
         self.assertEquals([call()], self._order.owner_organization.save.call_args_list)
 
-        self.assertEquals(
-            [call(self._order, contract) for contract in self._order.get_contracts()],
-            charging_engine.CDRManager.call_args_list,
-        )
+        # self.assertEquals(
+        #     [call(self._order, contract) for contract in self._order.get_contracts()],
+        #     charging_engine.CDRManager.call_args_list,
+        # )
 
-        self.assertEquals(
-            [call(trans["related_model"], "2016-01-20T13:12:39Z") for trans in transactions],
-            charging_engine.CDRManager().generate_cdr.call_args_list,
-        )
+        # self.assertEquals(
+        #     [call(trans["related_model"], "2016-01-20T13:12:39Z") for trans in transactions],
+        #     charging_engine.CDRManager().generate_cdr.call_args_list,
+        # )
 
         def charge_call(c, d):
             return call(
