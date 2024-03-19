@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2015 - 2016 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2015 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2024 Future Internet Consulting and Development Solutions S.L.
 
 # This file belongs to the business-charging-backend
 # of the Business API Ecosystem.
@@ -23,10 +24,10 @@ BILLING_ACCOUNT_HREF = "http://serverlocation:port/billingManagement/billingAcco
 
 OFFERING = {
     "id": "5",
+    "href": "5",
     "name": "Example offering",
     "version": "1.0",
     "description": "Example offering description",
-    "href": "http://localhost:8004/DSProductCatalog/api/catalogManagement/v2/productOffering/20:(2.0)",
     "productSpecification": {"href": "http://producturl.com/"},
     "serviceCandidate": {"id": "productClass"},
 }
@@ -39,50 +40,53 @@ PRODUCT = {
     ],
 }
 
-BILLING_ACCOUNT = {"customerAccount": {"href": "http://serverlocation:port/customerManagement/customerAccount/1789"}}
-
-
-CUSTOMER_ACCOUNT = {"customer": {"href": "http://serverlocation:port/customerManagement/customer/19"}}
-
-CUSTOMER = {
-    "contactMedium": [
+BILLING_ACCOUNT = {
+    "id": "1789",
+    "contact": [{
+        "contactMedium": [
         {
-            "type": "PostalAddress",
-            "medium": {
-                "streetOne": "Campus de Montegancedo",
-                "streetTwo": "s/n",
-                "postcode": "28660",
+            "mediumType": "PostalAddress",
+            "characteristic": {
+                "street1": "Campus de Montegancedo",
+                "street2": "s/n",
+                "postCode": "28660",
                 "city": "Madrid",
                 "stateOrProvince": "Madrid",
                 "country": "Spain",
-            },
+            }
         }
     ]
+    }]
 }
 
 BASIC_ORDER = {
     "id": "12",
     "state": "Acknowledged",
     "description": "",
-    "orderItem": [
+    "billingAccount": {"id": "1789", "href": BILLING_ACCOUNT_HREF},
+    "productOrderItem": [
         {
             "id": "1",
             "action": "add",
-            "billingAccount": [{"id": "1789", "href": BILLING_ACCOUNT_HREF}],
             "productOffering": {
                 "id": "20",
-                "href": "http://localhost:8004/DSProductCatalog/api/catalogManagement/v2/productOffering/20:(2.0)",
+                "href": "20",
             },
             "product": {
                 "productPrice": [
                     {
-                        "priceType": "one time",
-                        "unitOfMeasure": "",
-                        "price": {
-                            "amount": "12.00",
-                            "currency": "EUR",
+                        "productOfferingPrice": {
+                            "id": "urn:ProductOfferingPrice:1",
+                            "href": "urn:ProductOfferingPrice:1"
                         },
-                        "recurringChargePeriod": "",
+                        "priceType": "one time",
+                        "price": {
+                            "taxIncludedAmount": {
+                                "value":  "10.00",
+                                "unit": "EUR"
+                            },
+                            "taxRate": "20.00"
+                        },
                         "name": "One Time",
                         "validFor": {
                             "startDateTime": "2013-04-19T20:42:23.000+0000",
@@ -97,39 +101,42 @@ BASIC_ORDER = {
 
 
 BASIC_PRICING = {
+    "id": "urn:ProductOfferingPrice:1",
+    "href": "urn:ProductOfferingPrice:1",
     "priceType": "one time",
-    "unitOfMeasure": "",
     "price": {
-        "taxIncludedAmount": "12.00",
-        "dutyFreeAmount": "10.00",
-        "taxRate": "20.00",
-        "currencyCode": "EUR",
-        "percentage": 0,
+        "value": "10.00",
+        "unit": "EUR",
     },
-    "recurringChargePeriod": "",
     "name": "One Time",
 }
 
 RECURRING_ORDER = {
     "id": "12",
     "state": "Acknowledged",
-    "orderItem": [
+    "billingAccount": {"id": "1789", "href": BILLING_ACCOUNT_HREF},
+    "productOrderItem": [
         {
             "id": "1",
             "action": "add",
-            "billingAccount": [{"id": "1789", "href": BILLING_ACCOUNT_HREF}],
             "productOffering": {
                 "id": "20",
-                "href": "http://localhost:8004/DSProductCatalog/api/catalogManagement/v2/productOffering/20:(2.0)",
+                "href": "20",
             },
             "product": {
                 "productPrice": [
                     {
+                        "productOfferingPrice": {
+                            "id": "urn:ProductOfferingPrice:1",
+                            "href": "urn:ProductOfferingPrice:1"
+                        },
                         "priceType": "recurring",
-                        "unitOfMeasure": "",
                         "price": {
-                            "amount": "12.00",
-                            "currency": "EUR",
+                            "taxIncludedAmount": {
+                                "value":  "10.00",
+                                "unit": "EUR"
+                            },
+                            "taxRate": "20.00"
                         },
                         "recurringChargePeriod": "monthly",
                         "name": "Recurring Monthly Charge",
@@ -146,16 +153,14 @@ RECURRING_ORDER = {
 }
 
 RECURRING_PRICING = {
+    "id": "urn:ProductOfferingPrice:1",
+    "href": "urn:ProductOfferingPrice:1",
     "priceType": "recurring",
-    "unitOfMeasure": "",
     "price": {
-        "taxIncludedAmount": "12.00",
-        "dutyFreeAmount": "10.00",
-        "taxRate": "20.00",
-        "currencyCode": "EUR",
-        "percentage": 0,
+        "value": "10.00",
+        "unit": "EUR"
     },
-    "recurringChargePeriod": "monthly",
+    "recurringChargePeriodType": "monthly",
     "name": "Recurring Monthly Charge",
     "description": "A monthly recurring payment",
 }
@@ -163,25 +168,31 @@ RECURRING_PRICING = {
 USAGE_ORDER = {
     "id": "12",
     "state": "Acknowledged",
-    "orderItem": [
+    "billingAccount": {"id": "1789", "href": BILLING_ACCOUNT_HREF},
+    "productOrderItem": [
         {
             "id": "1",
             "action": "add",
-            "billingAccount": [{"id": "1789", "href": BILLING_ACCOUNT_HREF}],
             "productOffering": {
                 "id": "20",
-                "href": "http://localhost:8004/DSProductCatalog/api/catalogManagement/v2/productOffering/20:(2.0)",
+                "href": "20",
             },
             "product": {
                 "productPrice": [
                     {
+                        "productOfferingPrice": {
+                            "id": "urn:ProductOfferingPrice:1",
+                            "href": "urn:ProductOfferingPrice:1"
+                        },
                         "priceType": "Usage",
                         "unitOfMeasure": "megabyte",
                         "price": {
-                            "amount": "12.00",
-                            "currency": "EUR",
+                            "taxIncludedAmount": {
+                                "value":  "10.00",
+                                "unit": "EUR"
+                            },
+                            "taxRate": "20.00"
                         },
-                        "recurringChargePeriod": "",
                         "name": "Recurring Monthly Charge",
                         "description": "A monthly recurring payment",
                         "validFor": {
@@ -196,35 +207,35 @@ USAGE_ORDER = {
 }
 
 USAGE_PRICING = {
+    "id": "urn:ProductOfferingPrice:1",
+    "href": "urn:ProductOfferingPrice:1",
     "priceType": "Usage",
-    "unitOfMeasure": "megabyte",
-    "price": {
-        "taxIncludedAmount": "12.00",
-        "dutyFreeAmount": "10.00",
-        "taxRate": "20.00",
-        "currencyCode": "EUR",
-        "percentage": 0,
+    "unitOfMeasure": {
+        "units": "megabyte"
     },
-    "recurringChargePeriod": "",
+    "price": {
+        "value": "10.00",
+        "unit": "EUR"
+    },
     "name": "Recurring Monthly Charge",
     "description": "A monthly recurring payment",
     "validFor": {
         "startDateTime": "2013-04-19T20:42:23.000+0000",
         "endDateTime": "2013-06-19T04:00:00.000+0000",
-    },
+    }
 }
 
 FREE_ORDER = {
     "id": "12",
     "state": "Acknowledged",
-    "orderItem": [
+    "billingAccount": {"id": "1789", "href": BILLING_ACCOUNT_HREF},
+    "productOrderItem": [
         {
             "id": "1",
             "action": "add",
-            "billingAccount": [{"id": "1789", "href": BILLING_ACCOUNT_HREF}],
             "productOffering": {
                 "id": "20",
-                "href": "http://localhost:8004/DSProductCatalog/api/catalogManagement/v2/productOffering/20:(2.0)",
+                "href": "20",
             },
             "product": {},
         }
@@ -234,14 +245,14 @@ FREE_ORDER = {
 NOPRODUCT_ORDER = {
     "id": "12",
     "state": "Acknowledged",
-    "orderItem": [
+    "billingAccount": {"id": "1789", "href": BILLING_ACCOUNT_HREF},
+    "productOrderItem": [
         {
             "id": "1",
             "action": "add",
-            "billingAccount": [{"id": "1789", "href": BILLING_ACCOUNT_HREF}],
             "productOffering": {
                 "id": "20",
-                "href": "http://localhost:8004/DSProductCatalog/api/catalogManagement/v2/productOffering/20:(2.0)",
+                "href": "20",
             },
         }
     ],
@@ -464,24 +475,31 @@ INVALID_STATE_ORDER = {"id": "12", "state": "inProgress"}
 INVALID_MODEL_ORDER = {
     "id": "12",
     "state": "Acknowledged",
-    "orderItem": [
+    "billingAccount": {"id": "1789", "href": BILLING_ACCOUNT_HREF},
+    "productOrderItem": [
         {
             "id": "1",
             "action": "add",
             "productOffering": {
                 "id": "20",
-                "href": "http://localhost:8004/DSProductCatalog/api/catalogManagement/v2/productOffering/20:(2.0)",
+                "href": "20",
             },
             "product": {
                 "productPrice": [
                     {
+                        "productOfferingPrice": {
+                            "id": "urn:ProductOfferingPrice:1",
+                            "href": "urn:ProductOfferingPrice:1"
+                        },
                         "priceType": "Invalid",
                         "unitOfMeasure": "megabyte",
                         "price": {
-                            "amount": "12.00",
-                            "currency": "EUR",
+                            "taxIncludedAmount": {
+                                "value":  "10.00",
+                                "unit": "EUR"
+                            },
+                            "taxRate": "20.00"
                         },
-                        "recurringChargePeriod": "",
                         "name": "Recurring Monthly Charge",
                         "description": "A monthly recurring payment",
                         "validFor": {
@@ -496,20 +514,36 @@ INVALID_MODEL_ORDER = {
 }
 
 INVALID_MODEL_PRICING = {
+    "id": "urn:ProductOfferingPrice:1",
+    "href": "urn:ProductOfferingPrice:1",
     "priceType": "Invalid",
-    "unitOfMeasure": "megabyte",
-    "price": {
-        "taxIncludedAmount": "12.00",
-        "dutyFreeAmount": "10.00",
-        "taxRate": "20.00",
-        "currencyCode": "EUR",
-        "percentage": 0,
+    "unitOfMeasure": {
+        "units": "megabyte"
     },
-    "recurringChargePeriod": "",
+    "price": {
+        "value": "10.00",
+        "unit": "EUR"
+    },
     "name": "Recurring Monthly Charge",
     "description": "A monthly recurring payment",
     "validFor": {
         "startDateTime": "2013-04-19T20:42:23.000+0000",
         "endDateTime": "2013-06-19T04:00:00.000+0000",
-    },
+    }
+}
+
+MISSING_BILLING_ORDER = {
+    "id": "12",
+    "state": "Acknowledged",
+    "productOrderItem": [
+        {
+            "id": "1",
+            "action": "add",
+            "productOffering": {
+                "id": "20",
+                "href": "20",
+            },
+            "product": {},
+        }
+    ],
 }

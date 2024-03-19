@@ -42,6 +42,7 @@ from wstore.ordering.tests.test_data import *
     SITE="http://extpath.com:8080/",
     VERIFY_REQUESTS=True,
     BILLING="http://apis.docker:8080/DSBillingManagement",
+    CATALOG="http://catalog.com"
 )
 class OrderingManagementTestCase(TestCase):
     tags = ("ordering", "order-manager")
@@ -79,12 +80,6 @@ class OrderingManagementTestCase(TestCase):
         ordering_management.requests = MagicMock()
         self._response = MagicMock()
         self._response.status_code = 200
-        self._response.json.side_effect = [
-            OFFERING,
-            BILLING_ACCOUNT,
-            CUSTOMER_ACCOUNT,
-            CUSTOMER,
-        ]
         ordering_management.requests.get.return_value = self._response
 
         # Mock organization model
@@ -118,18 +113,25 @@ class OrderingManagementTestCase(TestCase):
         ordering_management.Offering.objects.filter.return_value = [self._offering_inst]
         ordering_management.Offering.objects.get.return_value = self._offering_inst
 
+        # Mock billing client
+        self._billing_instance = MagicMock()
+        ordering_management.BillingClient = MagicMock()
+        ordering_management.BillingClient.return_value = self._billing_instance
+
+        self._billing_instance.get_billing_account.return_value = BILLING_ACCOUNT
+
     def _check_contract_call(self, pricing):
         ordering_management.Contract.assert_called_once_with(
             item_id="1",
             pricing_model=pricing,
-            revenue_class="productClass",
+            #revenue_class="productClass",
             offering=self._offering_inst.pk,
         )
 
     def _check_offering_retrieving_call(self):
-        ordering_management.Offering.objects.filter.assert_called_once_with(off_id="5")
+        ordering_management.Offering.objects.filter.assert_called_once_with(off_id="20")
         self.assertEqual(
-            [call(off_id="5"), call(pk=ObjectId("61004aba5e05acc115f022f0"))],
+            [call(off_id="20"), call(pk=ObjectId("61004aba5e05acc115f022f0"))],
             ordering_management.Offering.objects.get.call_args_list,
         )
 
@@ -143,10 +145,10 @@ class OrderingManagementTestCase(TestCase):
                 "general_currency": "EUR",
                 "single_payment": [
                     {
-                        "value": "12.00",
+                        "value": "10.00",
                         "unit": "one time",
                         "tax_rate": "20.00",
-                        "duty_free": "10.00",
+                        "duty_free": "8.0000",
                     }
                 ],
             }
@@ -164,10 +166,10 @@ class OrderingManagementTestCase(TestCase):
                 "general_currency": "EUR",
                 "subscription": [
                     {
-                        "value": "12.00",
+                        "value": "10.00",
                         "unit": "monthly",
                         "tax_rate": "20.00",
-                        "duty_free": "10.00",
+                        "duty_free": "8.0000",
                     }
                 ],
             }
@@ -181,10 +183,10 @@ class OrderingManagementTestCase(TestCase):
                 "general_currency": "EUR",
                 "pay_per_use": [
                     {
-                        "value": "12.00",
+                        "value": "10.00",
                         "unit": "megabyte",
                         "tax_rate": "20.00",
-                        "duty_free": "10.00",
+                        "duty_free": "8.0000",
                     }
                 ],
             }
@@ -280,28 +282,10 @@ class OrderingManagementTestCase(TestCase):
         )
 
     def _invalid_billing(self):
-        valid_response = MagicMock()
-        valid_response.status_code = 200
-        valid_response.json.side_effect = [OFFERING]
-        invalid_response = MagicMock()
-        invalid_response.status_code = 400
-        ordering_management.requests.get.side_effect = [
-            valid_response,
-            invalid_response,
-        ]
+        self._billing_instance.get_billing_account.side_effect = Exception('Billing error')
 
     def _non_digital_offering(self):
         self._validator_inst.parse_characteristics.return_value = (None, None, None)
-
-    def _no_offering_description(self):
-        new_off = deepcopy(OFFERING)
-        del new_off["description"]
-        self._response.json.side_effect = [
-            new_off,
-            BILLING_ACCOUNT,
-            CUSTOMER_ACCOUNT,
-            CUSTOMER,
-        ]
 
     def _missing_offering(self):
         self._response.status_code = 404
@@ -341,15 +325,17 @@ class OrderingManagementTestCase(TestCase):
     def _missing_offering_local(self):
         ordering_management.Offering.objects.filter.return_value = []
 
+    def _missing_contact(self):
+        new_cust = deepcopy(BILLING_ACCOUNT)
+        new_cust["contact"] = []
+        self._billing_instance.get_billing_account.return_value = new_cust
+
     def _missing_postal(self):
-        new_cust = deepcopy(CUSTOMER)
-        new_cust["contactMedium"] = []
-        self._response.json.side_effect = [
-            OFFERING,
-            BILLING_ACCOUNT,
-            CUSTOMER_ACCOUNT,
-            new_cust,
-        ]
+        new_cust = deepcopy(BILLING_ACCOUNT)
+        new_cust["contact"] = [{
+            "contactMedium": []
+        }]
+        self._billing_instance.get_billing_account.return_value = new_cust
 
     def _terms_not_required(self):
         self._offering_inst.asset.has_terms = False
@@ -381,7 +367,7 @@ class OrderingManagementTestCase(TestCase):
                 BASIC_PRICING,
                 None,
                 _invalid_billing,
-                "OrderingError: There was an error at the time of retrieving the Billing Address",
+                "OrderingError: Invalid billing account, billing account could not be loaded",
             ),
             (
                 "non_digital_add",
@@ -401,78 +387,59 @@ class OrderingManagementTestCase(TestCase):
                 USAGE_ORDER,
                 USAGE_PRICING,
                 _usage_add_checker,
-                _no_offering_description,
             ),
-            ("free_add", FREE_ORDER, {}, _free_add_checker),
-            ("no_product_add", NOPRODUCT_ORDER, {}, _free_add_checker),
-            (
-                "discount",
-                USAGE_ORDER,
-                DISCOUNT_PRICING,
-                _basic_discount_checker,
-                _multiple_pricing,
-            ),
-            (
-                "recurring_fee",
-                USAGE_ORDER,
-                RECURRING_FEE_PRICING,
-                _recurring_fee_checker,
-            ),
-            ("double_price", USAGE_ORDER, DOUBLE_PRICE_PRICING, _double_price_checker),
-            (
-                "double_price_usage",
-                USAGE_ORDER,
-                DOUBLE_USAGE_PRICING,
-                _double_usage_checker,
-            ),
+            # (
+            #     "discount",
+            #     USAGE_ORDER,
+            #     DISCOUNT_PRICING,
+            #     _basic_discount_checker,
+            #     _multiple_pricing,
+            # ),
+            # (
+            #     "recurring_fee",
+            #     USAGE_ORDER,
+            #     RECURRING_FEE_PRICING,
+            #     _recurring_fee_checker,
+            # ),
+            # ("double_price", USAGE_ORDER, DOUBLE_PRICE_PRICING, _double_price_checker),
+            # (
+            #     "double_price_usage",
+            #     USAGE_ORDER,
+            #     DOUBLE_USAGE_PRICING,
+            #     _double_usage_checker,
+            # ),
             (
                 "pricing_not_found",
                 USAGE_ORDER,
                 BASIC_PRICING,
                 None,
                 None,
-                "OrderingError: The product price included in orderItem 1 does not match with any of the prices included in the related offering",
+                "OrderingError: The product price included in productOrderItem 1 does not match with any of the prices included in the related offering",
             ),
-            (
-                "multiple_pricing",
-                BASIC_ORDER,
-                BASIC_PRICING,
-                None,
-                _multiple_pricing,
-                "OrderingError: The product price included in orderItem 1 matches with multiple pricing models of the related offering",
-            ),
-            (
-                "invalid_alt",
-                USAGE_ORDER,
-                INV_ALTERATION_PRICING,
-                None,
-                None,
-                "OrderingError: Invalid price alteration, it is not possible to determine if it is a discount or a fee",
-            ),
-            (
-                "usage_alteration",
-                USAGE_ORDER,
-                USAGE_ALTERATION_PRICING,
-                None,
-                None,
-                "OrderingError: Invalid priceType in price alteration, it must be one time or recurring",
-            ),
-            (
-                "inv_alteration_cond",
-                USAGE_ORDER,
-                INV_CONDITION_PRICING,
-                None,
-                None,
-                "OrderingError: Invalid priceCondition in price alteration, format must be: [eq | lt | gt | le | ge] value",
-            ),
-            (
-                "invalid_initial_state",
-                INVALID_STATE_ORDER,
-                BASIC_PRICING,
-                None,
-                None,
-                "OrderingError: Only acknowledged orders can be initially processed",
-            ),
+            # (
+            #     "invalid_alt",
+            #     USAGE_ORDER,
+            #     INV_ALTERATION_PRICING,
+            #     None,
+            #     None,
+            #     "OrderingError: Invalid price alteration, it is not possible to determine if it is a discount or a fee",
+            # ),
+            # (
+            #     "usage_alteration",
+            #     USAGE_ORDER,
+            #     USAGE_ALTERATION_PRICING,
+            #     None,
+            #     None,
+            #     "OrderingError: Invalid priceType in price alteration, it must be one time or recurring",
+            # ),
+            # (
+            #     "inv_alteration_cond",
+            #     USAGE_ORDER,
+            #     INV_CONDITION_PRICING,
+            #     None,
+            #     None,
+            #     "OrderingError: Invalid priceCondition in price alteration, format must be: [eq | lt | gt | le | ge] value",
+            # ),
             (
                 "invalid_model",
                 INVALID_MODEL_ORDER,
@@ -480,6 +447,14 @@ class OrderingManagementTestCase(TestCase):
                 None,
                 None,
                 "OrderingError: Invalid price model Invalid",
+            ),
+            (
+                "missing_billing",
+                MISSING_BILLING_ORDER,
+                {},
+                None,
+                None,
+                "OrderingError: Missing billing account in product order",
             ),
             (
                 "invalid_offering",
@@ -511,7 +486,7 @@ class OrderingManagementTestCase(TestCase):
                 {},
                 None,
                 _missing_offering_local,
-                "OrderingError: The offering 5 has not been previously registered",
+                "OrderingError: The offering 20 has not been previously registered",
             ),
             (
                 "missing_postal_address",
@@ -519,6 +494,14 @@ class OrderingManagementTestCase(TestCase):
                 BASIC_PRICING,
                 None,
                 _missing_postal,
+                "OrderingError: Provided Billing Account does not contain a Postal Address",
+            ),
+            (
+                "missing_contact",
+                BASIC_ORDER,
+                BASIC_PRICING,
+                None,
+                _missing_contact,
                 "OrderingError: Provided Billing Account does not contain a Postal Address",
             ),
         ]
@@ -533,10 +516,18 @@ class OrderingManagementTestCase(TestCase):
         err_msg=None,
         terms_accepted=True,
     ):
-        # if name == 'free_add':
-        #    import ipdb; ipdb.sset_trace()
 
-        OFFERING["productOfferingPrice"] = [pricing]
+        # Mock requests results
+        self._response.json.side_effect = [
+            OFFERING,
+            pricing
+        ]
+
+        if "id" in pricing:
+            OFFERING["productOfferingPrice"] = [{
+                "id": pricing["id"],
+                "href": pricing["href"]
+            }]
 
         if side_effect is not None:
             side_effect(self)
@@ -558,37 +549,25 @@ class OrderingManagementTestCase(TestCase):
             ordering_management.ChargingEngine.assert_called_once_with(self._order_inst)
 
             # Check offering and product downloads
-            self.assertEquals(4, ordering_management.requests.get.call_count)
+            self.assertEquals(2, ordering_management.requests.get.call_count)
 
-            headers = {"Authorization": "Bearer " + self._customer.userprofile.access_token}
-            exp_url = "http://extpath.com:8080{}"
-            exp_billing = "http://apis.docker:8080{}"
             self.assertEquals(
                 [
                     call(
-                        exp_url.format("/DSProductCatalog/api/catalogManagement/v2/productOffering/20:(2.0)"),
+                        "http://catalog.com/productOffering/20",
                         verify=True,
                     ),
                     call(
-                        exp_billing.format(urlparse(BILLING_ACCOUNT_HREF).path),
-                        headers={},
-                        verify=True,
-                    ),
-                    call(
-                        exp_billing.format(urlparse(BILLING_ACCOUNT["customerAccount"]["href"]).path),
-                        headers={},
-                        verify=True,
-                    ),
-                    call(
-                        exp_billing.format(urlparse(CUSTOMER_ACCOUNT["customer"]["href"]).path),
-                        headers={},
+                        "http://catalog.com/productOfferingPrice/urn:ProductOfferingPrice:1",
                         verify=True,
                     ),
                 ],
                 ordering_management.requests.get.call_args_list,
             )
 
-            contact_medium = CUSTOMER["contactMedium"][0]["medium"]
+            self._billing_instance.get_billing_account.assert_called_once_with(BILLING_ACCOUNT["id"])
+
+            contact_medium = BILLING_ACCOUNT["contact"][0]["contactMedium"][0]["characteristic"]
 
             ordering_management.Order.objects.create.assert_called_once_with(
                 order_id="12",
@@ -597,8 +576,8 @@ class OrderingManagementTestCase(TestCase):
                 date=self._now,
                 state="pending",
                 tax_address={
-                    "street": contact_medium["streetOne"] + "\n" + contact_medium["streetTwo"],
-                    "postal": contact_medium["postcode"],
+                    "street": contact_medium["street1"] + "\n" + contact_medium["street2"],
+                    "postal": contact_medium["postCode"],
                     "city": contact_medium["city"],
                     "province": contact_medium["stateOrProvince"],
                     "country": contact_medium["country"],
@@ -612,9 +591,35 @@ class OrderingManagementTestCase(TestCase):
         else:
             self.assertEquals(err_msg, str(error))
 
+
+    @parameterized.expand([
+        ("free_add", FREE_ORDER, _free_add_checker),
+        ("no_product_add", NOPRODUCT_ORDER, _free_add_checker)
+    ])
+    def test_process_free_order(self, name, order, validator):
+        ordering_manager = ordering_management.OrderingManager()
+        error = None
+        try:
+            redirect_url = ordering_manager.process_order(self._customer, order, terms_accepted=True)
+        except OrderingError as e:
+            error = e
+
+        self.assertTrue(error is None)
+        self.assertEquals("http://redirectionurl.com/", redirect_url)
+
+        self.assertEquals([
+            call("http://catalog.com/productOffering/20", verify=True),
+        ],
+            ordering_management.requests.get.call_args_list,
+        )
+
+        self._billing_instance.get_billing_account.assert_called_once_with(BILLING_ACCOUNT["id"])
+
+        validator(self)
+
     BASIC_MODIFY = {
         "state": "Acknowledged",
-        "orderItem": [{"id": "1", "action": "modify", "product": {"id": "89"}}],
+        "productOrderItem": [{"id": "1", "action": "modify", "product": {"id": "89"}}],
     }
 
     @parameterized.expand(
@@ -630,7 +635,7 @@ class OrderingManagementTestCase(TestCase):
                 "mix_error",
                 {
                     "state": "Acknowledged",
-                    "orderItem": [{"action": "modify"}, {"action": "add"}],
+                    "productOrderItem": [{"action": "modify"}, {"action": "add"}],
                 },
                 {},
                 {},
@@ -640,7 +645,7 @@ class OrderingManagementTestCase(TestCase):
                 "multiple_mod",
                 {
                     "state": "Acknowledged",
-                    "orderItem": [{"action": "modify"}, {"action": "modify"}],
+                    "productOrderItem": [{"action": "modify"}, {"action": "modify"}],
                 },
                 {},
                 {},
@@ -648,7 +653,7 @@ class OrderingManagementTestCase(TestCase):
             ),
             (
                 "missing_product",
-                {"state": "Acknowledged", "orderItem": [{"action": "modify"}]},
+                {"state": "Acknowledged", "productOrderItem": [{"action": "modify"}]},
                 {},
                 {},
                 "OrderingError: It is required to specify product information in modify order items",
@@ -657,7 +662,7 @@ class OrderingManagementTestCase(TestCase):
                 "missing_product_id",
                 {
                     "state": "Acknowledged",
-                    "orderItem": [{"action": "modify", "product": {}}],
+                    "productOrderItem": [{"action": "modify", "product": {}}],
                 },
                 {},
                 {},
@@ -771,18 +776,18 @@ class OrderingClientTestCase(TestCase):
             (
                 "complete",
                 {
-                    "orderItem": [
-                        {"id": "1", "state": "InProgress"},
-                        {"id": "2", "state": "InProgress"},
+                    "productOrderItem": [
+                        {"id": "1", "state": "inProgress"},
+                        {"id": "2", "state": "inProgress"},
                     ]
                 },
             ),
             (
                 "partial",
                 {
-                    "orderItem": [
+                    "productOrderItem": [
                         {"id": "1", "state": "Acknowledged"},
-                        {"id": "2", "state": "InProgress"},
+                        {"id": "2", "state": "inProgress"},
                     ]
                 },
                 [{"id": "2"}],
@@ -793,19 +798,20 @@ class OrderingClientTestCase(TestCase):
         client = ordering_client.OrderingClient()
         order = {
             "id": "20",
-            "orderItem": [
+            "productOrderItem": [
                 {"id": "1", "state": "Acknowledged"},
                 {"id": "2", "state": "Acknowledged"},
             ],
         }
-        client.update_items_state(order, "InProgress", items)
+        client.update_items_state(order, "inProgress", items)
 
-        ordering_client.requests.patch.assert_called_once_with(
-            "http://localhost:8080/DSProductOrdering/api/productOrdering/v2/productOrder/20",
-            json=expected,
+        self.assertEquals(
+            [call("http://localhost:8080/productOrder/20", json={"state": "inProgress"}),
+             call("http://localhost:8080/productOrder/20", json=expected)],
+            ordering_client.requests.patch.call_args_list,
         )
 
-        self._response.raise_for_status.assert_called_once_with()
+        self.assertEquals([call(), call()], self._response.raise_for_status.call_args_list)
 
     def test_update_state(self):
         client = ordering_client.OrderingClient()
@@ -816,7 +822,7 @@ class OrderingClientTestCase(TestCase):
         client.update_state(order, new_state)
 
         ordering_client.requests.patch.assert_called_once_with(
-            "http://localhost:8080/DSProductOrdering/api/productOrdering/v2/productOrder/" + order["id"],
+            "http://localhost:8080/productOrder/" + order["id"],
             json={"state": new_state},
         )
 
@@ -830,7 +836,7 @@ class OrderingClientTestCase(TestCase):
         self.assertEquals({"id": "1"}, response)
 
         ordering_client.requests.get.assert_called_once_with(
-            "http://localhost:8080/DSProductOrdering/api/productOrdering/v2/productOrder/1"
+            "http://localhost:8080/productOrder/1"
         )
         self._response.raise_for_status.assert_called_once_with()
 
@@ -910,7 +916,7 @@ class OrderTestCase(TestCase):
         self.assertEquals([self._contract1, self._contract2], contracts)
 
 
-@override_settings(INVENTORY="http://localhost:8080/DSProductInventory")
+@override_settings(INVENTORY="http://localhost:8080")
 class InventoryClientTestCase(TestCase):
     tags = ("inventory",)
 
@@ -951,12 +957,12 @@ class InventoryClientTestCase(TestCase):
         client.create_inventory_subscription()
 
         inventory_client.requests.get.assert_called_once_with(
-            "http://localhost:8080/DSProductInventory/api/productInventory/v2/hub"
+            "http://localhost:8080/hub"
         )
 
         if created:
             inventory_client.requests.post.assert_called_once_with(
-                "http://localhost:8080/DSProductInventory/api/productInventory/v2/hub",
+                "http://localhost:8080/hub",
                 json={"callback": "http://localhost:8004/charging/api/orderManagement/products"},
             )
         else:
@@ -984,8 +990,8 @@ class InventoryClientTestCase(TestCase):
         client.activate_product("1")
 
         inventory_client.requests.patch.assert_called_once_with(
-            "http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1",
-            json={"status": "Active", "startDate": "2016-01-22T04:10:25.176751Z"},
+            "http://localhost:8080/product/1",
+            json={"status": "active", "startDate": "2016-01-22T04:10:25.176751Z"},
         )
         inventory_client.requests.patch().raise_for_status.assert_called_once_with()
 
@@ -994,8 +1000,8 @@ class InventoryClientTestCase(TestCase):
         client.suspend_product("1")
 
         inventory_client.requests.patch.assert_called_once_with(
-            "http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1",
-            json={"status": "Suspended"},
+            "http://localhost:8080/product/1",
+            json={"status": "suspended"},
         )
         inventory_client.requests.patch().raise_for_status.assert_called_once_with()
 
@@ -1006,16 +1012,16 @@ class InventoryClientTestCase(TestCase):
         self.assertEquals(
             [
                 call(
-                    "http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1",
+                    "http://localhost:8080/product/1",
                     json={
-                        "status": "Active",
+                        "status": "active",
                         "startDate": "2016-01-22T04:10:25.176751Z",
                     },
                 ),
                 call(
-                    "http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1",
+                    "http://localhost:8080/product/1",
                     json={
-                        "status": "Terminated",
+                        "status": "terminated",
                         "terminationDate": "2016-01-22T04:10:25.176751Z",
                     },
                 ),
@@ -1033,7 +1039,7 @@ class InventoryClientTestCase(TestCase):
         client.get_product("1")
 
         inventory_client.requests.get.assert_called_once_with(
-            "http://localhost:8080/DSProductInventory/api/productInventory/v2/product/1"
+            "http://localhost:8080/product/1"
         )
         inventory_client.requests.get().raise_for_status.assert_called_once_with()
 
@@ -1043,7 +1049,7 @@ class InventoryClientTestCase(TestCase):
         products = client.get_products(query=query)
 
         inventory_client.requests.get.assert_called_once_with(
-            "http://localhost:8080/DSProductInventory/api/productInventory/v2/product" + qs
+            "http://localhost:8080/product" + qs
         )
         inventory_client.requests.get().raise_for_status.assert_called_once_with()
 

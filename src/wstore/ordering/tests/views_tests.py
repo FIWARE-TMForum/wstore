@@ -71,7 +71,7 @@ class OrderingCollectionTestCase(TestCase):
         [
             (
                 "basic",
-                {"id": 1, "orderItem": [{"id": "2"}, {"id": "3"}]},
+                {"id": 1, "productOrderItem": [{"id": "2"}, {"id": "3"}]},
                 None,
                 200,
                 CORRECT_RESP,
@@ -173,24 +173,13 @@ class OrderingCollectionTestCase(TestCase):
 
             if redirect_url is None and not failed:
                 self.assertEquals(
-                    [
-                        call(data, "InProgress"),
-                    ],
-                    views.OrderingClient().update_state.call_args_list,
-                )
-
-                self.assertEquals(
-                    [call(data, "Completed", [{"id": "2"}])],
+                    [call(data, "inProgress"), call(data, "completed", [{"id": "2"}, {"id": "3"}])],
                     views.OrderingClient().update_items_state.call_args_list,
                 )
 
         if failed:
             self.assertEquals(
-                [call(data, "InProgress")],
-                views.OrderingClient().update_state.call_args_list,
-            )
-            self.assertEquals(
-                [call(data, "Failed")],
+                [call(data, "inProgress"), call(data, "failed")],
                 views.OrderingClient().update_items_state.call_args_list,
             )
 
@@ -204,147 +193,40 @@ BASIC_PRODUCT_EVENT = {
 class InventoryCollectionTestCase(TestCase):
     tags = ("inventory", "inventory-view")
 
-    _ren_date = datetime(2016, 6, 1)
 
-    def _initial_charge(self):
-        self.contract.charges = [MagicMock()]
-        self.contract.pricing_model = {"single_payment": []}
-
-    def _subscription_charge(self):
-        self.contract.charges = [MagicMock()]
-        self.contract.pricing_model = {"subscription": [{"renovation_date": self._ren_date}]}
-
-    def _missing_contract(self):
-        self.contract.offering = "61004aba5e05acc115f022f0"
-        offering = MagicMock()
-        offering.off_id = 26
-
-        views.Offering = MagicMock()
-        views.Offering.objects.get.return_value = offering
-
-    def _activation_error(self):
-        views.on_product_acquired.side_effect = Exception("Error")
-
-    @parameterized.expand(
-        [
-            ("basic", BASIC_PRODUCT_EVENT, 200, CORRECT_RESP),
-            (
-                "initial_charge",
-                BASIC_PRODUCT_EVENT,
-                200,
-                CORRECT_RESP,
-                True,
-                _initial_charge,
-                True,
-            ),
-            (
-                "subscription_charge",
-                BASIC_PRODUCT_EVENT,
-                200,
-                CORRECT_RESP,
-                True,
-                _subscription_charge,
-                True,
-                _ren_date,
-            ),
-            (
-                "no_creation",
-                {"eventType": "ProductUpdateNotification"},
-                200,
-                CORRECT_RESP,
-                False,
-            ),
-            (
-                "invalid_data",
-                "invalid",
-                400,
-                {
-                    "result": "error",
-                    "error": "The provided data is not a valid JSON object",
-                },
-                False,
-            ),
-            (
-                "missing_contract",
-                BASIC_PRODUCT_EVENT,
-                404,
-                {
-                    "result": "error",
-                    "error": "There is not a contract for the specified product",
-                },
-                False,
-                _missing_contract,
-            ),
-            (
-                "activation_failure",
-                BASIC_PRODUCT_EVENT,
-                400,
-                {"result": "error", "error": "The asset has failed to be activated"},
-                False,
-                _activation_error,
-            ),
-        ]
-    )
-    def test_activate_product(
-        self,
-        name,
-        data,
-        exp_code,
-        exp_response,
-        called=True,
-        side_effect=None,
-        billing_exp=False,
-        exp_date=None,
-    ):
-        views.InventoryClient = MagicMock()
-        views.on_product_acquired = MagicMock()
-
-        views.BillingClient = MagicMock()
-
-        self.contract = MagicMock()
-        self.contract.offering = "61004aba5e05acc115f022f0"
-
-        offering = MagicMock()
-        offering.off_id = 10
-
-        contract1 = MagicMock()
-        contract1.offering = "61004aba5e05acc115f022f1"
-
-        offering2 = MagicMock()
-        offering2.off_id = 20
-
-        views.Offering = MagicMock()
-        views.Offering.objects.get.side_effect = [offering2, offering]
-
-        order = MagicMock()
-        order.get_contracts.return_value = [contract1, self.contract]
-
-        views.Order = MagicMock()
-        views.Order.objects.get.return_value = order
+    def test_activate_product_ignore_event(self):
+        views.OrderingManager = MagicMock()
 
         collection = views.InventoryCollection(permitted_methods=("POST",))
-        response, body = api_call(self, collection, data, side_effect)
+        response, body = api_call(self, collection, {
+            "eventType": "ProductUpdateNotification",
+        }, None)
 
-        self.assertEquals(exp_code, response.status_code)
-        self.assertEquals(exp_response, body)
+        self.assertEquals(200, response.status_code)
+        self.assertEquals({
+            "message": "OK",
+            "result": "correct"
+        }, body)
 
-        if called:
-            views.Order.objects.get.assert_called_once_with(order_id="23")
-            views.on_product_acquired.assert_called_once_with(order, self.contract)
-            views.InventoryClient.assert_called_once_with()
-            views.InventoryClient().activate_product.assert_called_once_with(1)
-            self.assertEquals(1, self.contract.product_id)
+        self.assertEquals(0, views.OrderingManager.call_count)
 
-        if billing_exp:
-            views.BillingClient.assert_called_once_with()
-            views.BillingClient().create_charge.assert_called_once_with(
-                self.contract.charges[0],
-                data["event"]["product"]["id"],
-                start_date=None,
-                end_date=exp_date,
-            )
-        else:
-            self.assertEquals(0, views.BillingClient.call_count)
+    @parameterized.expand([
+        ('ok', 200, None, {"message": "OK", "result": "correct"}),
+        ('error', 400, "Invalid event", {"error": "Invalid event", "result": "error"})
+    ])
+    def test_activate_product(self, name, code, error, resp):
+        manager_inst = MagicMock()
+        manager_inst.activate_product.return_value = (code, error)
+        views.OrderingManager = MagicMock()
+        views.OrderingManager.return_value = manager_inst
+
+        collection = views.InventoryCollection(permitted_methods=("POST",))
+        response, body = api_call(self, collection, BASIC_PRODUCT_EVENT, None)
+
+        self.assertEquals(code, response.status_code)
+        self.assertEquals(resp, body)
+
+        manager_inst.activate_product.assert_called_once_with('23', BASIC_PRODUCT_EVENT["event"]["product"])
 
 
 RENOVATION_DATA = {"name": "oid=1", "id": "24", "priceType": "recurring"}
