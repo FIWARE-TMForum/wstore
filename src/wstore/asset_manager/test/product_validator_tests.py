@@ -785,7 +785,7 @@ class ValidatorTestCase(TestCase):
                 MISSING_CURRENCY,
                 None,
                 None,
-                "Missing required field currencyCode in price",
+                "Missing currency code in price",
             ),
             (
                 "invalid_currency",

@@ -98,7 +98,11 @@ class OfferingValidator(CatalogValidator):
 
             # Check if the pricing is included or it is needed to download it
             for price in product_offering["productOfferingPrice"]:
+                recurringKey = "recurringChargePeriod"
                 if "id" in price and "href" in price and "priceType" not in price:
+
+                    # This field is different depending on whether the model is embedded
+                    recurringKey = "recurringChargePeriodType"
                     price_model = self._get_price(price["id"])
                 else:
                     price_model = price
@@ -129,14 +133,14 @@ class OfferingValidator(CatalogValidator):
                 ):
                     raise ValueError("Invalid priceType, it must be one time, recurring, or usage")
 
-                if price_model["priceType"] == "recurring" and "recurringChargePeriodType" not in price_model:
-                    raise ValueError("Missing required field recurringChargePeriodType for recurring priceType")
+                if price_model["priceType"] == "recurring" and recurringKey not in price_model:
+                    raise ValueError("Missing required field {} for recurring priceType".format(recurringKey))
 
                 if price_model["priceType"] == "recurring" and not ChargePeriod.contains(
-                    price_model["recurringChargePeriodType"]
+                    price_model[recurringKey]
                 ):
                     raise ValueError(
-                        "Unrecognized recurringChargePeriodType: " + price_model["recurringChargePeriodType"]
+                        "Unrecognized " + recurringKey + ": " + price_model[recurringKey]
                     )
 
                 # Validate currency

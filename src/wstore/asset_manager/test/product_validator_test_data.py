@@ -1179,7 +1179,12 @@ BASIC_OFFERING = {
         {
             "name": "plan",
             "priceType": "one time",
-            "price": {"currencyCode": "EUR", "taxIncludedAmount": "1.0"},
+            "price": {
+                "taxIncludedAmount": {
+                    "unit": "EUR",
+                    "value": "1.0"
+                }
+            },
         }
     ],
 }
@@ -1191,7 +1196,11 @@ OPEN_OFFERING = {
     "name": "TestOffering",
     "version": "1.0",
     "productSpecification": {"id": "20", "href": "http://catalog.com/products/20"},
-    "productOfferingPrice": [{"name": "open", "description": "Open offering"}],
+    "productOfferingPrice": [{
+        "id": "urn:priceid:1234",
+        "name": "open",
+        "description": "Open offering"
+    }],
 }
 
 ZERO_OFFERING = {
@@ -1205,7 +1214,12 @@ ZERO_OFFERING = {
         {
             "name": "plan",
             "priceType": "one time",
-            "price": {"currencyCode": "EUR", "taxIncludedAmount": "0"},
+            "price": {
+                "taxIncludedAmount": {
+                    "unit": "EUR",
+                    "value": "0"
+                }
+            },
         }
     ],
 }
@@ -1231,7 +1245,7 @@ OPEN_BUNDLE = {
     "version": "1.0",
     "productSpecification": {},
     "bundledProductOffering": [{"id": "6"}, {"id": "7"}],
-    "productOfferingPrice": [{"name": "open", "description": "Open offering"}],
+    "productOfferingPrice": [{"id": "urn:priceid:1234", "name": "open", "description": "Open offering"}],
 }
 
 BUNDLE_MISSING_FIELD = {
@@ -1262,7 +1276,11 @@ INVALID_PRICETYPE = {
 
 MISSING_PERIOD = {
     "productSpecification": {"id": "20", "href": "http://catalog.com/products/20"},
-    "productOfferingPrice": [{"name": "plan", "priceType": "recurring", "price": {"currencyCode": "EUR"}}],
+    "productOfferingPrice": [{
+        "name": "plan",
+        "priceType": "recurring",
+        "price": {"currencyCode": "EUR"}
+    }],
 }
 
 INVALID_PERIOD = {
@@ -1301,7 +1319,11 @@ INVALID_CURRENCY = {
             "name": "plan",
             "priceType": "recurring",
             "recurringChargePeriod": "monthly",
-            "price": {"currencyCode": "invalid"},
+            "price": {
+                "taxIncludedAmount": {
+                    "unit": "invalid"
+                }
+            },
         }
     ],
 }
@@ -1317,12 +1339,22 @@ MULTIPLE_NAMES = {
         {
             "name": "plan",
             "priceType": "one time",
-            "price": {"currencyCode": "EUR", "taxIncludedAmount": "1.0"},
+            "price": {
+                "taxIncludedAmount": {
+                    "unit": "EUR",
+                    "value": "1.0"
+                }
+            },
         },
         {
             "name": "Plan",
             "priceType": "one time",
-            "price": {"currencyCode": "EUR", "taxIncludedAmount": "1.0"},
+            "price": {
+                "taxIncludedAmount": {
+                    "unit": "EUR",
+                    "value": "1.0"
+                }
+            },
         },
     ],
 }
@@ -1335,11 +1367,15 @@ OPEN_MIXED = {
     "version": "1.0",
     "productSpecification": {"id": "20", "href": "http://catalog.com/products/20"},
     "productOfferingPrice": [
-        {"name": "open", "description": "Open offering"},
+        {"id": "urn:price:1234", "name": "open", "description": "Open offering"},
         {
             "name": "single",
             "priceType": "one time",
-            "price": {"currencyCode": "EUR", "taxIncludedAmount": "1.0"},
+            "price": {
+                "taxIncludedAmount": {
+                    "unit": "EUR",
+                    "value": "1.0"
+                }},
         },
     ],
 }
