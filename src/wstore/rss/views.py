@@ -60,7 +60,7 @@ class RevenueSharingModels(APIResource):
             model.aggregatorShare = data.get("aggregatorShare", model.aggregatorShare)
             model.stakeholders = data.get("stakeholders", model.stakeholders)
 
-            model.save(update_fields=data.keys())
+            model.save()
             return HttpResponse(
                 json.dumps(
                     model_to_dict(

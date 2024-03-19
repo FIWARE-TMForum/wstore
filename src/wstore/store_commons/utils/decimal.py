@@ -16,7 +16,7 @@ class CustomDecimalField(models.DecimalField):
 
     def to_python(self, value):
         try:
-            return self._force_precision(Decimal(value)) if value else None
+            return self._force_precision(Decimal(str(value))) if value else None
         except:
             raise ValidationError("`value` cannot be converted to Decimal")
 

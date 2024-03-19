@@ -57,7 +57,7 @@ class StakeholderShare(models.Model):
         max_length=100, primary_key=True, blank=False, validators=[RSSValidators.validate_type(str)]
     )
     stakeholderShare = CustomDecimalField(
-        max_digits=7, decimal_places=2, validators=[MinValueValidator(0.0), MaxValueValidator(100.0)]
+        max_digits=5, decimal_places=2, validators=[MinValueValidator(0.0), MaxValueValidator(100.0)]
     )
 
     class Meta:
@@ -66,6 +66,8 @@ class StakeholderShare(models.Model):
 
 class RSSModel(models.Model):
     # `providerId` is compatible with `Organization.name`
+    _id = models.ObjectIdField()
+
     providerId = models.CharField(max_length=100)
     productClass = models.CharField(max_length=100, blank=False, validators=[RSSValidators.validate_type(str)])
     algorithmType = models.CharField(
