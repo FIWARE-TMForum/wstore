@@ -3,12 +3,10 @@ name: Tests
 on:
   push:
     branches:
-      - new-apis
       - master
 
   pull_request:
     branches:
-      - new-apis
       - master
 
 jobs:
@@ -64,8 +62,8 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           tags: |
-            fiware/biz-ecosystem-charging-backend:dome-dev
-          push: ${{ github.ref == 'refs/heads/new-apis' }}
+            fiware/biz-ecosystem-charging-backend:master
+          push: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
