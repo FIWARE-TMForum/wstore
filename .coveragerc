@@ -1,3 +1,0 @@
-[report]
-omit =
-    wstore/test/test-plugin-1-0/*
