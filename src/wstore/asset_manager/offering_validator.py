@@ -91,6 +91,7 @@ class OfferingValidator(CatalogValidator):
     @on_product_offering_validation
     def _validate_offering_pricing(self, provider, product_offering, bundled_offerings):
         is_open = False
+        is_custom = False
 
         # Validate offering pricing fields
         if "productOfferingPrice" in product_offering:
@@ -130,8 +131,14 @@ class OfferingValidator(CatalogValidator):
                     price_model["priceType"] != "one time"
                     and price_model["priceType"] != "recurring"
                     and price_model["priceType"] != "usage"
+                    and price_model["priceType"] != "custom"
                 ):
-                    raise ValueError("Invalid priceType, it must be one time, recurring, or usage")
+                    raise ValueError("Invalid priceType, it must be one time, recurring, usage, or custom")
+
+                # If the model is custom no extra validation is required
+                if price_model["priceType"] == "custom":
+                    is_custom = True
+                    continue
 
                 if price_model["priceType"] == "recurring" and recurringKey not in price_model:
                     raise ValueError("Missing required field {} for recurring priceType".format(recurringKey))
@@ -156,7 +163,10 @@ class OfferingValidator(CatalogValidator):
             if is_open and len(names) > 1:
                 raise ValueError("Open offerings cannot include price plans")
 
-        return is_open
+            if is_custom and len(names) > 1:
+                raise ValueError("Custom pricing offerings cannot include price plans")
+
+        return is_open, is_custom
 
     def _download(self, url):
         r = requests.get(url)
@@ -202,7 +212,7 @@ class OfferingValidator(CatalogValidator):
 
         return asset, is_digital
 
-    def _build_offering_model(self, provider, product_offering, bundled_offerings, is_open):
+    def _build_offering_model(self, provider, product_offering, bundled_offerings, is_open, is_custom=False):
         asset, is_digital = self._validate_offering_model(product_offering, bundled_offerings, is_open)
 
         # Open products can only be included in a single offering
@@ -228,6 +238,7 @@ class OfferingValidator(CatalogValidator):
             is_digital=is_digital,
             asset=asset,
             is_open=is_open,
+            is_custom=is_custom,
             bundled_offerings=[offering.pk for offering in bundled_offerings],
         )
 
@@ -250,12 +261,12 @@ class OfferingValidator(CatalogValidator):
 
     def validate_creation(self, provider, product_offering):
         bundled_offerings = self._get_bundled_offerings(product_offering)
-        is_open = self._validate_offering_pricing(provider, product_offering, bundled_offerings)
-        self._build_offering_model(provider, product_offering, bundled_offerings, is_open)
+        is_open, is_custom = self._validate_offering_pricing(provider, product_offering, bundled_offerings)
+        self._build_offering_model(provider, product_offering, bundled_offerings, is_open, is_custom)
 
     def validate_update(self, provider, product_offering):
         bundled_offerings = self._get_bundled_offerings(product_offering)
-        is_open = self._validate_offering_pricing(provider, product_offering, bundled_offerings)
+        is_open, is_custom = self._validate_offering_pricing(provider, product_offering, bundled_offerings)
 
         asset, is_digital = self._validate_offering_model(product_offering, bundled_offerings, is_open)
 

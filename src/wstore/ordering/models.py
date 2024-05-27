@@ -38,6 +38,7 @@ class Offering(models.Model):
     is_digital = models.BooleanField(default=True)
     asset = models.ForeignKey(Resource, on_delete=models.DO_NOTHING, null=True, blank=True)
     is_open = models.BooleanField(default=False)
+    is_custom = models.BooleanField(default=False)
     bundled_offerings = models.JSONField(default=[])  # List
 
 

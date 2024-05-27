@@ -217,9 +217,17 @@ class OrderingManager:
         # Build offering
         offering, offering_info = self._get_offering(item)
 
+        # Check if the product price has not been include but must
+        if ("product" not in item or "productPrice" not in item["product"] or not len(item["product"]["productPrice"])) and \
+                len(offering_info["productOfferingPrice"]) and not offering.is_custom:
+            raise OrderingError(f"The price model has not been included for productOrderItem {item['id']}")
+
         # Build pricing if included
         pricing = {}
         if "product" in item and "productPrice" in item["product"] and len(item["product"]["productPrice"]):
+            if offering.is_custom:
+                raise OrderingError(f"Custom pricing models are handled externally, please don't include a price in product")
+
             model_mapper = {
                 "one time": "single_payment",
                 "recurring": "subscription",
