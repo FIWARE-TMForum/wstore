@@ -60,7 +60,10 @@ class OrderingManagementTestCase(TestCase):
         ordering_management.Offering = MagicMock()
         self._offering_inst = MagicMock()
         self._offering_inst.pk = "61004aba5e05acc115f022f0"
+        self._offering_inst.is_custom = False
+
         self._order_inst.bundled_offerings = []
+
         ordering_management.Offering.objects.filter.return_value = []
         ordering_management.Offering.objects.create.return_value = self._offering_inst
 
@@ -504,6 +507,14 @@ class OrderingManagementTestCase(TestCase):
                 _missing_contact,
                 "OrderingError: Provided Billing Account does not contain a Postal Address",
             ),
+            (
+                "missing_order_pricing",
+                FREE_ORDER,
+                BASIC_PRICING,
+                None,
+                None,
+                "OrderingError: The price model has not been included for productOrderItem 1",
+            )
         ]
     )
     def test_process_order(
@@ -616,6 +627,27 @@ class OrderingManagementTestCase(TestCase):
         self._billing_instance.get_billing_account.assert_called_once_with(BILLING_ACCOUNT["id"])
 
         validator(self)
+
+    def test_custom_pricing_order(self):
+        self._offering_inst.is_custom = True
+
+        ordering_manager = ordering_management.OrderingManager()
+        redirect_url = ordering_manager.process_order(self._customer, FREE_ORDER, terms_accepted=True)
+        self.assertEquals("http://redirectionurl.com/", redirect_url)
+
+    def test_custom_pricing_order_error(self):
+        self._offering_inst.is_custom = True
+
+        ordering_manager = ordering_management.OrderingManager()
+
+        error = None
+        try:
+            ordering_manager.process_order(self._customer, BASIC_ORDER, terms_accepted=True)
+        except OrderingError as e:
+            error = e
+
+        self.assertEquals(str(error), "OrderingError: Custom pricing models are handled externally, please don't include a price in product")
+
 
     BASIC_MODIFY = {
         "state": "Acknowledged",
@@ -858,6 +890,7 @@ class OrderTestCase(TestCase):
             name="Offering1",
             version="1.0",
             description="Offering1",
+            is_custom=False
         )
 
         offering2 = Offering(
@@ -867,6 +900,7 @@ class OrderTestCase(TestCase):
             name="Offering2",
             version="1.0",
             description="Offering2",
+            is_custom=False
         )
 
         self._contract1 = Contract(item_id="1", product_id="3", offering=offering1.pk)
