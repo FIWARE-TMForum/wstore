@@ -606,7 +606,7 @@ class ValidatorTestCase(TestCase):
         self.assertEquals(0, product_validator.Resource.objects.get.call_count)
         self.assertEquals(0, product_validator.Resource.objects.create.call_count)
 
-    def _validate_offering_calls(self, offering, asset, is_digital, is_open=False):
+    def _validate_offering_calls(self, offering, asset, is_digital, is_open=False, is_custom=False):
         # Check resource retrieving if needed
         offering_validator.Resource.objects.filter.assert_called_once_with(
             product_id=offering["productSpecification"]["id"]
@@ -622,6 +622,7 @@ class ValidatorTestCase(TestCase):
             is_open=is_open,
             asset=asset,
             bundled_offerings=[],
+            is_custom=is_custom
         )
 
     def _validate_single_offering_calls(self, offering):
@@ -644,6 +645,7 @@ class ValidatorTestCase(TestCase):
             version=offering["version"],
             is_digital=is_digital,
             is_open=is_open,
+            is_custom=False,
             asset=None,
             bundled_offerings=[off[0].pk for off in self._bundles],
         )
@@ -661,6 +663,9 @@ class ValidatorTestCase(TestCase):
 
     def _validate_open_bundle_calls(self, offering):
         self._validate_bundle_offering_calls(offering, True, is_open=True)
+
+    def _validate_custom_pricing_calls(self, offering):
+        self._validate_offering_calls(offering, self._asset_instance, True, False, True)
 
     def _mock_product_request(self):
         offering_validator.requests = MagicMock()
@@ -745,6 +750,7 @@ class ValidatorTestCase(TestCase):
             ),
             ("open_offering", OPEN_OFFERING, _validate_open_offering_calls, None),
             ("open_bundle", OPEN_BUNDLE, _validate_open_bundle_calls, _open_bundled),
+            ("custom_pricing", CUSTOM_PRICING_OFFERING, _validate_custom_pricing_calls, None),
             (
                 "missing_type",
                 MISSING_PRICETYPE,
@@ -757,7 +763,7 @@ class ValidatorTestCase(TestCase):
                 INVALID_PRICETYPE,
                 None,
                 None,
-                "Invalid priceType, it must be one time, recurring, or usage",
+                "Invalid priceType, it must be one time, recurring, usage, or custom",
             ),
             (
                 "missing_charge_period",
@@ -842,6 +848,13 @@ class ValidatorTestCase(TestCase):
                 None,
                 None,
                 "Open offerings cannot include price plans",
+            ),
+            (
+                "custom_pricing_error",
+                CUSTOM_MULTIPLE,
+                None,
+                None,
+                "Custom pricing offerings cannot include price plans",
             ),
             (
                 "open_multiple_offers",

@@ -1231,6 +1231,48 @@ FREE_OFFERING = {
     "productSpecification": {"id": "20", "href": "http://catalog.com/products/20"},
 }
 
+CUSTOM_PRICING_OFFERING = {
+    "id": "3",
+    "href": "http://catalog.com/offerin3",
+    "isBundle": False,
+    "name": "TestOffering",
+    "version": "1.0",
+    "productSpecification": {"id": "20", "href": "http://catalog.com/products/20"},
+    "productOfferingPrice": [
+        {
+            "name": "The custom pricing",
+            "priceType": "custom",
+            "description": "Custom pricing description"
+        }
+    ],
+}
+
+CUSTOM_MULTIPLE = {
+    "id": "3",
+    "href": "http://catalog.com/offerin3",
+    "isBundle": False,
+    "name": "TestOffering",
+    "version": "1.0",
+    "productSpecification": {"id": "20", "href": "http://catalog.com/products/20"},
+    "productOfferingPrice": [
+        {
+            "name": "The custom pricing",
+            "priceType": "custom",
+            "description": "Custom pricing description"
+        },
+        {
+            "name": "plan",
+            "priceType": "one time",
+            "price": {
+                "taxIncludedAmount": {
+                    "unit": "EUR",
+                    "value": "1"
+                }
+            },
+        }
+    ],
+}
+
 BUNDLE_OFFERING = {
     "isBundle": True,
     "name": "TestOffering",
