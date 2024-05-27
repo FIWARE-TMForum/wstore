@@ -3,4 +3,4 @@ relative_files = True
 
 [report]
 omit =
-    wstore/test/test-plugin-1-0/*
+    wstore/test/*
