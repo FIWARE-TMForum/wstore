@@ -284,7 +284,13 @@ if isinstance(PROPAGATE_TOKEN, str):
     PROPAGATE_TOKEN = PROPAGATE_TOKEN == "True"
 
 AWS_ACCESS_KEY_ID = environ.get("AWS_ACCESS_KEY_ID", "")
-AWS_SECRET_ACCESS_KEY = environ.get("AWS_ACCESS_KEY_ID", "")
-BUCKET_NAME = environ.get("AWS_ACCESS_KEY_ID", "")
-ACL_ENABLED = environ.get("AWS_ACCESS_KEY_ID", False)
-AWS_ENABLED = environ.get("AWS_ACCESS_KEY_ID", True)
+AWS_SECRET_ACCESS_KEY = environ.get("AWS_SECRET_ACCESS_KEY", "")
+BUCKET_NAME = environ.get("BUCKET_NAME", "")
+
+ACL_ENABLED = environ.get("ACL_ENABLED", False)
+if isinstance(ACL_ENABLED, str):
+    ACL_ENABLED = ACL_ENABLED == "True"
+
+AWS_ENABLED = environ.get("AWS_ENABLED", False)
+if isinstance(AWS_ENABLED, str):
+    AWS_ENABLED = AWS_ENABLED == "True"
