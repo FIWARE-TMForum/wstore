@@ -1247,6 +1247,27 @@ CUSTOM_PRICING_OFFERING = {
     ],
 }
 
+CUSTOM_PRICING_OFFERING_MULTIPLE = {
+    "id": "3",
+    "href": "http://catalog.com/offerin3",
+    "isBundle": False,
+    "name": "TestOffering",
+    "version": "1.0",
+    "productSpecification": {"id": "20", "href": "http://catalog.com/products/20"},
+    "productOfferingPrice": [
+        {
+            "name": "The custom pricing",
+            "priceType": "custom",
+            "description": "Custom pricing description"
+        },
+        {
+            "name": "The custom pricing 2",
+            "priceType": "custom",
+            "description": "Custom pricing description"
+        }
+    ],
+}
+
 CUSTOM_MULTIPLE = {
     "id": "3",
     "href": "http://catalog.com/offerin3",

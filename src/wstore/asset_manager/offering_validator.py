@@ -96,6 +96,7 @@ class OfferingValidator(CatalogValidator):
         # Validate offering pricing fields
         if "productOfferingPrice" in product_offering:
             names = []
+            customs = 0
 
             # Check if the pricing is included or it is needed to download it
             for price in product_offering["productOfferingPrice"]:
@@ -138,6 +139,7 @@ class OfferingValidator(CatalogValidator):
                 # If the model is custom no extra validation is required
                 if price_model["priceType"] == "custom":
                     is_custom = True
+                    customs += 1
                     continue
 
                 if price_model["priceType"] == "recurring" and recurringKey not in price_model:
@@ -163,8 +165,8 @@ class OfferingValidator(CatalogValidator):
             if is_open and len(names) > 1:
                 raise ValueError("Open offerings cannot include price plans")
 
-            if is_custom and len(names) > 1:
-                raise ValueError("Custom pricing offerings cannot include price plans")
+            if is_custom and len(names) != customs:
+                raise ValueError("Custom pricing offerings cannot include processed price plans")
 
         return is_open, is_custom
 

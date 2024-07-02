@@ -751,6 +751,7 @@ class ValidatorTestCase(TestCase):
             ("open_offering", OPEN_OFFERING, _validate_open_offering_calls, None),
             ("open_bundle", OPEN_BUNDLE, _validate_open_bundle_calls, _open_bundled),
             ("custom_pricing", CUSTOM_PRICING_OFFERING, _validate_custom_pricing_calls, None),
+            ("custom_pricing_multiple", CUSTOM_PRICING_OFFERING_MULTIPLE, _validate_custom_pricing_calls, None),
             (
                 "missing_type",
                 MISSING_PRICETYPE,
@@ -854,7 +855,7 @@ class ValidatorTestCase(TestCase):
                 CUSTOM_MULTIPLE,
                 None,
                 None,
-                "Custom pricing offerings cannot include price plans",
+                "Custom pricing offerings cannot include processed price plans",
             ),
             (
                 "open_multiple_offers",
