@@ -88,6 +88,34 @@ class OfferingValidator(CatalogValidator):
         if Decimal(price["value"]) <= Decimal("0"):
             raise ValueError("Invalid price, it must be greater than zero.")
 
+    def _validate_price_component(self, price_component):
+        recurringKey = "recurringChargePeriodType"
+        recurring_pricing = ["recurring", "recurring-prepaid", "recurring-postpaid"]
+        valid_pricing = recurring_pricing.extend(["one time", "usage"])
+
+        # Validate price unit
+        if "priceType" not in price_component:
+            raise ValueError("Missing required field priceType in productOfferingPrice component")
+
+        if price_component["priceType"].lower() not in valid_pricing:
+            raise ValueError("Invalid priceType, it must be one time, recurring, or usage")
+
+        if price_component["priceType"].lower() in recurring_pricing and recurringKey not in price_component:
+            raise ValueError("Missing required field {} for recurring priceType".format(recurringKey))
+
+        if price_component["priceType"].lower() in recurring_pricing and not ChargePeriod.contains(
+            price_component[recurringKey]
+        ):
+            raise ValueError(
+                "Unrecognized " + recurringKey + ": " + price_component[recurringKey]
+            )
+
+        # Validate currency
+        if "price" not in price_component:
+            raise ValueError("Missing required field price in productOfferingPrice")
+
+        self._validate_value_price(price_component["price"])
+
     @on_product_offering_validation
     def _validate_offering_pricing(self, provider, product_offering, bundled_offerings):
         is_open = False
@@ -98,16 +126,14 @@ class OfferingValidator(CatalogValidator):
             names = []
             customs = 0
 
-            # Check if the pricing is included or it is needed to download it
+            # Check if the pricing is included or if it is needed to download it
             for price in product_offering["productOfferingPrice"]:
-                recurringKey = "recurringChargePeriod"
                 if "id" in price and "href" in price and "priceType" not in price:
-
                     # This field is different depending on whether the model is embedded
-                    recurringKey = "recurringChargePeriodType"
                     price_model = self._get_price(price["id"])
                 else:
-                    price_model = price
+                    # Embedded pricing not supported
+                    raise ValueError("Embedded pricing is not supported")
 
                 if "name" not in price_model:
                     raise ValueError("Missing required field name in productOfferingPrice")
@@ -124,43 +150,21 @@ class OfferingValidator(CatalogValidator):
                     is_open = True
                     continue
 
-                # Validate price unit
-                if "priceType" not in price_model:
-                    raise ValueError("Missing required field priceType in productOfferingPrice")
-
-                if (
-                    price_model["priceType"] != "one time"
-                    and price_model["priceType"] != "recurring"
-                    and price_model["priceType"] != "usage"
-                    and price_model["priceType"] != "custom"
-                ):
-                    raise ValueError("Invalid priceType, it must be one time, recurring, usage, or custom")
-
                 # If the model is custom no extra validation is required
-                if price_model["priceType"] == "custom":
+                if "priceType" in price_model and price_model["priceType"] == "custom":
                     is_custom = True
                     customs += 1
                     continue
 
-                if price_model["priceType"] == "recurring" and recurringKey not in price_model:
-                    raise ValueError("Missing required field {} for recurring priceType".format(recurringKey))
+                # Validate price components
+                if "isBundle" in price_model and price_model["isBundle"]:
+                    # The price plan has the price components linked
+                    [self._validate_price_component(self._get_price(price_comp["id"]))
+                        for price_comp in price_model["bundledPopRelationship"]]
 
-                if price_model["priceType"] == "recurring" and not ChargePeriod.contains(
-                    price_model[recurringKey]
-                ):
-                    raise ValueError(
-                        "Unrecognized " + recurringKey + ": " + price_model[recurringKey]
-                    )
-
-                # Validate currency
-                if "price" not in price_model:
-                    raise ValueError("Missing required field price in productOfferingPrice")
-
-                price_unit = price_model["price"]
-                if "taxIncludedAmount" in price_model["price"]:
-                    price_unit = price_model["price"]["taxIncludedAmount"]
-
-                self._validate_value_price(price_unit)
+                else:
+                    # The price plan has 1 single price component attached
+                    self._validate_price_component(price_model)
 
             if is_open and len(names) > 1:
                 raise ValueError("Open offerings cannot include price plans")

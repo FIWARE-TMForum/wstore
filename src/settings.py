@@ -94,11 +94,11 @@ LOGGING = {
 }
 
 CHARGE_PERIODS = {
-    "daily": 1,  # One day
-    "weekly": 7,  # One week
-    "monthly": 30,  # One month
-    "quarterly": 90,  # Three months
-    "yearly": 365,  # One year
+    "day": 1,  # One day
+    "week": 7,  # One week
+    "month": 30,  # One month
+    "quarter": 90,  # Three months
+    "year": 365,  # One year
     "quinquennial": 1825,  # Five years
 }
 
