@@ -69,6 +69,15 @@ class OfferingValidator(CatalogValidator):
         asset.is_public = is_open
         asset.save()
 
+    def _get_product_spec(self, id_):
+        url = "{}/productSpecification/{}".format(settings.CATALOG, id_)
+        resp = requests.get(url)
+
+        if resp.status_code != 200:
+            raise ValueError("Invalid product reference")
+
+        return resp.json()
+
     def _get_price(self, id_):
         url = "{}/productOfferingPrice/{}".format(settings.CATALOG, id_)
         resp = requests.get(url)
@@ -88,7 +97,7 @@ class OfferingValidator(CatalogValidator):
         if Decimal(price["value"]) <= Decimal("0"):
             raise ValueError("Invalid price, it must be greater than zero.")
 
-    def _validate_price_component(self, price_component):
+    def _validate_price_component(self, price_component, prod_spec_id):
         recurringKey = "recurringChargePeriodType"
         recurring_pricing = ["recurring", "recurring-prepaid", "recurring-postpaid"]
         valid_pricing = recurring_pricing.extend(["one time", "usage"])
@@ -115,6 +124,37 @@ class OfferingValidator(CatalogValidator):
             raise ValueError("Missing required field price in productOfferingPrice")
 
         self._validate_value_price(price_component["price"])
+
+        # Check if a configuration profile has been provided
+        if "prodSpecCharValueUse" in price_component:
+            # Get the product spec
+            product_spec = self._get_product_spec(prod_spec_id)
+
+            # Check that the characteristics exists
+            for value_use in price_component["prodSpecCharValueUse"]:
+                # Check the product spec ID
+                if "productSpecification" in value_use and value_use["productSpecification"]["id"] != prod_spec_id:
+                    raise ValueError("The productSpecValueUse point to an invalid product specification")
+
+                # Check that the characteristic exists
+                prd_char = None
+                for prod_char in (product_spec["productCharacteristic"] if "productCharacteristic" in product_spec else []):
+                    if prod_char["id"] == value_use["id"]:
+                        prd_char = prod_char
+                        break
+
+                if prd_char is None:
+                    raise ValueError("ProductSpecValueUse refers to non-existing product characteristic")
+
+                # Check that the value is valid
+                if "productSpecCharacteristicValue" in value_use:
+                    for use_val in value_use["productSpecCharacteristicValue"]:
+                        for prd_char_value in prd_char:
+                            if use_val["value"] == prd_char_value["value"] and use_val["unitOfMeasure"].lower() == prd_char_value["unitOfMeasure"].lower():
+                                break
+                        else:
+                            raise ValueError("ProductSpecValueUse refers to non-existing product characteristic value")
+
 
     @on_product_offering_validation
     def _validate_offering_pricing(self, provider, product_offering, bundled_offerings):
@@ -159,12 +199,12 @@ class OfferingValidator(CatalogValidator):
                 # Validate price components
                 if "isBundle" in price_model and price_model["isBundle"]:
                     # The price plan has the price components linked
-                    [self._validate_price_component(self._get_price(price_comp["id"]))
+                    [self._validate_price_component(self._get_price(price_comp["id"], product_offering['productSpecification']['id']))
                         for price_comp in price_model["bundledPopRelationship"]]
 
                 else:
                     # The price plan has 1 single price component attached
-                    self._validate_price_component(price_model)
+                    self._validate_price_component(price_model, product_offering['productSpecification']['id'])
 
             if is_open and len(names) > 1:
                 raise ValueError("Open offerings cannot include price plans")
