@@ -100,7 +100,8 @@ class OfferingValidator(CatalogValidator):
     def _validate_price_component(self, price_component, prod_spec_id):
         recurringKey = "recurringChargePeriodType"
         recurring_pricing = ["recurring", "recurring-prepaid", "recurring-postpaid"]
-        valid_pricing = recurring_pricing.extend(["one time", "usage"])
+        valid_pricing = ["one time", "usage"]
+        valid_pricing.extend(recurring_pricing)
 
         # Validate price unit
         if "priceType" not in price_component:
