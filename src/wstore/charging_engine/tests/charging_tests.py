@@ -112,7 +112,7 @@ class ChargingEngineTestCase(TestCase):
             "subscription": [
                 {
                     "value": "12.00",
-                    "unit": "monthly",
+                    "unit": "month",
                     "tax_rate": "20.00",
                     "duty_free": "10.00",
                 }
@@ -218,7 +218,7 @@ class ChargingEngineTestCase(TestCase):
                         "subscription": [
                             {
                                 "value": "12.00",
-                                "unit": "monthly",
+                                "unit": "month",
                                 "tax_rate": "20.00",
                                 "duty_free": "10.00",
                             }
@@ -277,7 +277,7 @@ class ChargingEngineTestCase(TestCase):
                         "subscription": [
                             {
                                 "value": "12.00",
-                                "unit": "monthly",
+                                "unit": "month",
                                 "tax_rate": "20.00",
                                 "duty_free": "10.00",
                                 "renovation_date": datetime(2015, 10, 1, 10, 10),
@@ -785,7 +785,7 @@ class ChargingEngineTestCase(TestCase):
 
     def _set_renovation_alteration_contracts(self):
         return (
-            self._set_alterations("subscription", "monthly", datetime(2015, 10, 1, 10, 10)),
+            self._set_alterations("subscription", "month", datetime(2015, 10, 1, 10, 10)),
             [],
         )
 
@@ -869,7 +869,7 @@ class ChargingEngineTestCase(TestCase):
                 "subscription": [
                     {
                         "value": "12.00",
-                        "unit": "monthly",
+                        "unit": "month",
                         "tax_rate": "20.00",
                         "duty_free": "10.00",
                         "renovation_date": datetime(2016, 2, 19, 13, 12, 39),
@@ -1096,7 +1096,7 @@ class ChargingEngineTestCase(TestCase):
                 "subscription": [
                     {
                         "value": c,
-                        "unit": "monthly",
+                        "unit": "month",
                         "tax_rate": "0.00",
                         "duty_free": d,
                         "renovation_date": datetime(2016, 2, 19, 13, 12, 39),
