@@ -91,8 +91,8 @@ class OfferingValidatorTestCase(TestCase):
     def _validate_offering_calls(self, offering, asset, is_digital, is_open=False, is_custom=False):
         # Check resource retrieving if needed
         self.assertEquals([
-            #call(product_id=offering["productSpecification"]["id"]),
-            call(product_id=offering["productSpecification"]["id"])
+            call(product_id=offering["productSpecification"]["id"]),
+            #call(product_id=offering["productSpecification"]["id"])
         ], offering_validator.Resource.objects.filter.call_args_list)
 
         # Check offering creation
@@ -168,6 +168,34 @@ class OfferingValidatorTestCase(TestCase):
 
         self._validate_offering_calls(offering, self._asset_instance, True, False, True)
 
+    def _validate_profile_plan(self, offering):
+        self.assertEquals([
+            call("{}/productOfferingPrice/{}".format('https://tmf-catalog.com', 'urn:product-offering-price:1234')),
+            call("{}/productSpecification/{}".format('https://tmf-catalog.com', 'urn:ProductSpecification:12345'))
+        ], offering_validator.requests.get.call_args_list)
+
+        self._validate_offering_calls(offering, self._asset_instance, True)
+
+    def _validate_profile_multiple(self, offering):
+        self.assertEquals([
+            call("{}/productOfferingPrice/{}".format('https://tmf-catalog.com', 'urn:product-offering-price:1234')),
+            call("{}/productSpecification/{}".format('https://tmf-catalog.com', 'urn:ProductSpecification:12345')),
+            call("{}/productOfferingPrice/{}".format('https://tmf-catalog.com', 'urn:ProductOfferingPrice:1111')),
+            call("{}/productOfferingPrice/{}".format('https://tmf-catalog.com', 'urn:ProductOfferingPrice:1112'))
+        ], offering_validator.requests.get.call_args_list)
+
+        self._validate_offering_calls(offering, self._asset_instance, True)
+
+    def _validate_component_multiple(self, offering):
+        self.assertEquals([
+            call("{}/productOfferingPrice/{}".format('https://tmf-catalog.com', 'urn:product-offering-price:1234')),
+            call("{}/productOfferingPrice/{}".format('https://tmf-catalog.com', 'urn:ProductOfferingPrice:1111')),
+            call("{}/productSpecification/{}".format('https://tmf-catalog.com', 'urn:ProductSpecification:12345')),
+            call("{}/productOfferingPrice/{}".format('https://tmf-catalog.com', 'urn:ProductOfferingPrice:1112'))
+        ], offering_validator.requests.get.call_args_list)
+
+        self._validate_offering_calls(offering, self._asset_instance, True)
+
     def _non_digital_offering(self):
         offering_validator.Resource.objects.filter.return_value = []
 
@@ -212,10 +240,13 @@ class OfferingValidatorTestCase(TestCase):
         ("open_bundle", OPEN_BUNDLE, [OPEN_OFFERING_PRICE], _validate_open_bundle_calls, _open_bundled),
         ("custom_pricing", BASE_OFFERING, [CUSTOM_OFFERING_PRICING], _validate_custom_pricing_calls),
         ("custom_pricing_multiple", BASE_OFFERING_MULTIPLE, [CUSTOM_OFFERING_PRICING, CUSTOM_OFFERING_PRICING_2], _validate_custom_pricing_calls_multiple),
+        ("profile_plan_single", BASE_OFFERING, [PROFILE_PLAN, PROFILE_PROD_SPEC], _validate_profile_plan),
+        ("profile_plan_multiple", BASE_OFFERING, [PROFILE_PLAN_MULTIPLE, PROFILE_PROD_SPEC, PRICE_COMPONENT_1, PRICE_COMPONENT_2], _validate_profile_multiple),
+        ("component_char_plan", BASE_OFFERING, [COMPONENT_PLAN, PRICE_COMPONENT_3, PROFILE_PROD_SPEC, PRICE_COMPONENT_4], _validate_component_multiple)
     ])
-    def test_create_offering_validation(self, name, offering, pricing, checker, side_effect=None):
+    def test_create_offering_validation(self, name, offering, requests, checker, side_effect=None):
         # Mock requests
-        self._mock_requests(pricing)
+        self._mock_requests(requests)
         self._mock_offering_bundle(offering)
 
         if side_effect is not None:
@@ -246,6 +277,9 @@ class OfferingValidatorTestCase(TestCase):
         ("open_multiple_offers", BASE_OFFERING, [OPEN_OFFERING_PRICE], "Assets of open offerings cannot be monetized in other offerings", _open_existing),
         ("open_non_digital", BASE_OFFERING, [OPEN_OFFERING_PRICE], "Non digital products cannot be open", _non_digital_offering),
         ("open_bundle_mixed", OPEN_BUNDLE, [OPEN_OFFERING_PRICE], "If a bundle is open all the bundled offerings must be open", _non_open_bundled),
+        ("invalid_spec", INVALID_SPEC, [PROFILE_PLAN, PROFILE_PROD_SPEC], "The productSpecValueUse point to an invalid product specification"),
+        ("invalid_char_use", BASE_OFFERING, [INVALID_USE, PROFILE_PROD_SPEC], "ProductSpecValueUse refers to non-existing product characteristic"),
+        ("invalid_char_use_value", BASE_OFFERING, [INVALID_USE_VALUE, PROFILE_PROD_SPEC], "ProductSpecValueUse refers to non-existing product characteristic value")
     ])
     def test_create_offering_validation_error(self, name, offering, pricing, msg, side_effect=None):
         self._mock_requests(pricing)

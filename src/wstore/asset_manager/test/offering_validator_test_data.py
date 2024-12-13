@@ -27,7 +27,7 @@ BASE_OFFERING = {
     "isBundle": False,
     "name": "TestOffering",
     "version": "1.0",
-    "productSpecification": {"id": "20", "href": "http://catalog.com/products/20"},
+    "productSpecification": {"id": "urn:ProductSpecification:12345", "href": "http://catalog.com/products/20"},
     "productOfferingPrice": [{
         "id": "urn:product-offering-price:1234",
         "href": "urn:product-offering-price:1234"
@@ -40,7 +40,7 @@ BASE_OFFERING_MULTIPLE = {
     "isBundle": False,
     "name": "TestOffering",
     "version": "1.0",
-    "productSpecification": {"id": "20", "href": "http://catalog.com/products/20"},
+    "productSpecification": {"id": "urn:ProductSpecification:12345", "href": "http://catalog.com/products/20"},
     "productOfferingPrice": [{
         "id": "urn:product-offering-price:1234",
         "href": "urn:product-offering-price:1234"
@@ -262,3 +262,355 @@ OPEN_MIXED = {
         },
     ],
 }
+
+PROFILE_PROD_SPEC = {
+    "id": "urn:ProductSpecification:12345",
+    "name": "Linux VM",
+    "brand": "FICODES",
+    "productNumber": "CSC-340-NGFW",
+    "description": "A Linux VM with multiple options",
+    "isBundle": False,
+    "lastUpdate": "2020-09-23T16:42:23.0Z",
+    "lifecycleStatus": "Active",
+    "relatedParty": [{
+        "id": "1234",
+        "href": "https://mycsp.com:8080/tmf-api/partyManagement/v4/partyRole/1234",
+        "role": "Owner",
+        "name": "Gustave Flaubert",
+    }],
+    "productSpecCharacteristic": [{
+        "id": "urn:Characteristic:1234",
+        "name": "CPU",
+        "configurable": True,
+        "valueType": "number",
+        "productSpecCharacteristicValue": [{
+            "isDefault": True,
+            "value": "4",
+            "unitOfMeasure": "cpus"
+        }, {
+            "isDefault": False,
+            "value": "8",
+            "unitOfMeasure": "cpus"
+        }]
+    }, {
+        "id": "urn:Characteristic:5678",
+        "name": "RAM Memory",
+        "configurable": True,
+        "valueType": "number",
+        "productSpecCharacteristicValue": [{
+            "isDefault": True,
+            "value": "8",
+            "unitOfMeasure": "gb"
+        }, {
+            "isDefault": False,
+            "value": "16",
+            "unitOfMeasure": "gb"
+        }]
+    }, {
+        "id": "urn:Characteristic:09876",
+        "name": "Storage",
+        "configurable": True,
+        "valueType": "number",
+        "productSpecCharacteristicValue": [{
+            "isDefault": True,
+            "value": "10",
+            "unitOfMeasure": "gb"
+        }, {
+            "isDefault": False,
+            "value": "30",
+            "unitOfMeasure": "gb"
+        }, {
+            "isDefault": False,
+            "value": "50",
+            "unitOfMeasure": "gb"
+        }]
+    }],
+    "resourceSpecification": [{
+        "id": "urn:ResourceSpecification:1234",
+        "href": "urn:ResourceSpecification:1234"
+    }]
+}
+
+PROFILE_PLAN = {
+    "id": "urn:product-offering-price:1234",
+    "href": "urn:product-offering-price:1234",
+    "name": "Price SMALL",
+    "description": "4CPU, 8GB RAM, 20GB HD: 24 eu per m, recurring prepaid",
+    "version": "1.0",
+    "priceType": "recurring-prepaid",
+    "recurringChargePeriodType": "month",
+    "recurringChargePeriodLength": 1,
+    "isBundle": False,
+    "lifecycleStatus": "Active",
+    "price": {
+        "unit": "EUR",
+        "value": 24
+    },
+    "prodSpecCharValueUse": [{
+      "id": "urn:Characteristic:1234",
+      "name": "CPU",
+      "valueType": "number",
+      "productSpecCharacteristicValue": [
+        {
+            "isDefault": True,
+            "value": "4",
+            "unitOfMeasure": "cpus"
+        }
+      ],
+      "productSpecification": {
+        "id": "urn:ProductSpecification:12345",
+        "href": "urn:ProductSpecification:12345"
+      }
+    }, {
+      "id": "urn:Characteristic:5678",
+      "name": "RAM Memory",
+      "valueType": "number",
+      "productSpecCharacteristicValue": [
+        {
+            "isDefault": True,
+            "value": "8",
+            "unitOfMeasure": "gb"
+        }
+      ],
+      "productSpecification": {
+        "id": "urn:ProductSpecification:12345",
+        "href": "urn:ProductSpecification:12345"
+      }
+    }, {
+      "id": "urn:Characteristic:09876",
+      "name": "Storage",
+      "valueType": "number",
+      "productSpecCharacteristicValue": [
+        {
+            "isDefault": True,
+            "value": "10",
+            "unitOfMeasure": "gb"
+        }
+      ],
+      "productSpecification": {
+        "id": "urn:ProductSpecification:12345",
+        "href": "urn:ProductSpecification:12345"
+      }
+    }]
+}
+
+PROFILE_PLAN_MULTIPLE = {
+    "id": "urn:ProductOfferingPrice:1745",
+    "href": "urn:ProductOfferingPrice:1745",
+    "name": "Tailored Price",
+    "description": "Tailored price plan",
+    "version": "1.0",
+    "isBundle": True,
+    "lifecycleStatus": "Active",
+    "bundledPopRelationship": [{
+        "id": "urn:ProductOfferingPrice:1111",
+        "href": "urn:ProductOfferingPrice:1111"
+    }, {
+        "id": "urn:ProductOfferingPrice:1112",
+        "href": "urn:ProductOfferingPrice:1112"
+    }],
+    "prodSpecCharValueUse": [{
+      "id": "urn:Characteristic:1234",
+      "name": "CPU",
+      "valueType": "number",
+      "productSpecCharacteristicValue": [
+        {
+            "isDefault": True,
+            "value": "4",
+            "unitOfMeasure": "cpus"
+        }
+      ],
+      "productSpecification": {
+        "id": "urn:ProductSpecification:12345",
+        "href": "urn:ProductSpecification:12345"
+      }
+    }, {
+      "id": "urn:Characteristic:5678",
+      "name": "RAM Memory",
+      "valueType": "number",
+      "productSpecCharacteristicValue": [
+        {
+            "isDefault": True,
+            "value": "8",
+            "unitOfMeasure": "gb"
+        }
+      ],
+      "productSpecification": {
+        "id": "urn:ProductSpecification:12345",
+        "href": "urn:ProductSpecification:12345"
+      }
+    }]
+}
+
+PRICE_COMPONENT_1 = {
+    "id": "urn:ProductOfferingPrice:1111",
+    "href": "urn:ProductOfferingPrice:1111",
+    "name": "CPU Price component",
+    "description": "1.50 eu per CPU per month",
+    "version": "1.0",
+    "priceType": "recurring-prepaid",
+    "recurringChargePeriodType": "month",
+    "recurringChargePeriodLength": 1,
+    "isBundle": False,
+    "lifecycleStatus": "Active",
+    "unitOfMeasure": {
+        "amount": 1,
+        "units": "cpu"
+    },
+    "price": {
+        "unit": "EUR",
+        "value": 1.50
+    }
+}
+
+PRICE_COMPONENT_2 = {
+    "id": "urn:ProductOfferingPrice:1112",
+    "href": "urn:ProductOfferingPrice:1112",
+    "name": "RAM Price component",
+    "description": "1 eu per GB per m",
+    "version": "1.0",
+    "priceType": "recurring-prepaid",
+    "recurringChargePeriodType": "month",
+    "recurringChargePeriodLength": 1,
+    "isBundle": False,
+    "lifecycleStatus": "Active",
+    "unitOfMeasure": {
+        "amount": 1,
+        "units": "gb"
+    },
+    "price": {
+        "unit": "EUR",
+        "value": 1
+    }
+}
+
+COMPONENT_PLAN = {
+    "id": "urn:ProductOfferingPrice:1745",
+    "href": "urn:ProductOfferingPrice:1745",
+    "name": "Tailored Price",
+    "description": "Tailored price plan",
+    "version": "1.0",
+    "isBundle": True,
+    "lifecycleStatus": "Active",
+    "bundledPopRelationship": [{
+        "id": "urn:ProductOfferingPrice:1111",
+        "href": "urn:ProductOfferingPrice:1111"
+    }, {
+        "id": "urn:ProductOfferingPrice:1112",
+        "href": "urn:ProductOfferingPrice:1112"
+    }]
+}
+
+
+PRICE_COMPONENT_3 = {
+    "id": "urn:ProductOfferingPrice:1111",
+    "href": "urn:ProductOfferingPrice:1111",
+    "name": "CPU Price component",
+    "description": "1.50 eu per CPU per month",
+    "version": "1.0",
+    "priceType": "recurring-prepaid",
+    "recurringChargePeriodType": "month",
+    "recurringChargePeriodLength": 1,
+    "isBundle": False,
+    "lifecycleStatus": "Active",
+    "unitOfMeasure": {
+        "amount": 1,
+        "units": "cpu"
+    },
+    "price": {
+        "unit": "EUR",
+        "value": 1.50
+    },
+    "tax": [{
+        "taxAmount": {
+            "unit": "EUR",
+            "value": 0.2
+        },
+        "taxCategory": "VAT",
+        "taxRate": 20.0
+    }],
+    "prodSpecCharValueUse": [{
+      "id": "urn:Characteristic:1234",
+      "name": "CPU",
+      "productSpecification": {
+        "id": "urn:ProductSpecification:12345",
+        "href": "urn:ProductSpecification:12345"
+      }
+    }]
+}
+
+PRICE_COMPONENT_4 = {
+    "id": "urn:ProductOfferingPrice:1112",
+    "href": "urn:ProductOfferingPrice:1112",
+    "name": "RAM Price component",
+    "description": "1 eu per GB per m",
+    "version": "1.0",
+    "priceType": "recurring-prepaid",
+    "recurringChargePeriodType": "month",
+    "recurringChargePeriodLength": 1,
+    "isBundle": False,
+    "lifecycleStatus": "Active",
+    "unitOfMeasure": {
+        "amount": 1,
+        "units": "gb"
+    },
+    "price": {
+        "unit": "EUR",
+        "value": 1
+    },
+    "tax": [{
+        "taxAmount": {
+            "unit": "EUR",
+            "value": 0.2
+        },
+        "taxCategory": "VAT",
+        "taxRate": 20.0
+    }],
+    "prodSpecCharValueUse": [{
+      "id": "urn:Characteristic:5678",
+      "name": "RAM",
+      "productSpecification": {
+        "id": "urn:ProductSpecification:12345",
+        "href": "urn:ProductSpecification:12345"
+      }
+    }]
+}
+
+INVALID_SPEC = deepcopy(BASE_OFFERING)
+INVALID_SPEC["productSpecification"] =  {"id": "urn:ProductSpecification:20"}
+
+INVALID_USE = deepcopy(PROFILE_PLAN)
+INVALID_USE["prodSpecCharValueUse"] = [{
+    "id": "urn:Characteristic:5555",
+    "name": "CPU",
+    "valueType": "number",
+    "productSpecCharacteristicValue": [
+        {
+            "isDefault": True,
+            "value": "4",
+            "unitOfMeasure": "cpus"
+        }
+    ],
+    "productSpecification": {
+        "id": "urn:ProductSpecification:12345",
+        "href": "urn:ProductSpecification:12345"
+    }
+}]
+
+INVALID_USE_VALUE = deepcopy(PROFILE_PLAN)
+INVALID_USE_VALUE["prodSpecCharValueUse"] = [{
+    "id": "urn:Characteristic:1234",
+    "name": "CPU",
+    "valueType": "number",
+    "productSpecCharacteristicValue": [
+        {
+            "isDefault": True,
+            "value": "27",
+            "unitOfMeasure": "cpus"
+        }
+    ],
+    "productSpecification": {
+        "id": "urn:ProductSpecification:12345",
+        "href": "urn:ProductSpecification:12345"
+    }
+}]
