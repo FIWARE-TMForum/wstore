@@ -99,6 +99,18 @@ class OfferingValidator(CatalogValidator):
         if Decimal(price["value"]) <= Decimal("0"):
             raise ValueError("Invalid price, it must be greater than zero.")
 
+    def _is_same_value(self, use_val, prd_char_value):
+        use_unit = None
+        if "unitOfMeasure" in use_val:
+            use_unit = use_val["unitOfMeasure"].lower()
+
+        prd_unit = None
+        if "unitOfMeasure" in prd_char_value:
+            prd_unit = prd_char_value["unitOfMeasure"].lower()
+
+        return use_val["value"] == prd_char_value["value"] and \
+            use_unit == prd_unit
+
     def _validate_char_value_use(self, price_component, prod_spec_id):
         # Check if a configuration profile has been provided
         if "prodSpecCharValueUse" in price_component:
@@ -125,7 +137,7 @@ class OfferingValidator(CatalogValidator):
                 if "productSpecCharacteristicValue" in value_use:
                     for use_val in value_use["productSpecCharacteristicValue"]:
                         for prd_char_value in prd_char["productSpecCharacteristicValue"]:
-                            if use_val["value"] == prd_char_value["value"] and use_val["unitOfMeasure"].lower() == prd_char_value["unitOfMeasure"].lower():
+                            if self._is_same_value(use_val, prd_char_value):
                                 break
                         else:
                             raise ValueError("ProductSpecValueUse refers to non-existing product characteristic value")
