@@ -37,6 +37,7 @@ from wstore.charging_engine.charging_engine import ChargingEngine
 from wstore.ordering.errors import OrderingError
 from wstore.ordering.inventory_client import InventoryClient
 from wstore.ordering.models import Contract, Offering, Order
+from wstore.ordering.ordering_client import OrderingClient
 from wstore.store_commons.rollback import rollback
 
 logger = getLogger("wstore.default_logger")
@@ -56,7 +57,7 @@ class OrderingManager:
 
         return r.json()
 
-    def _get_offering(self, item):
+    def _get_offering_info(self, item):
         # Download related product offering and product specification
         catalog = urlparse(settings.CATALOG)
 
@@ -66,6 +67,11 @@ class OrderingManager:
         )
 
         offering_info = self._download(offering_url, "product offering", item["id"])
+        return offering_info
+
+    def _get_offering(self, item):
+        offering_info = self._get_offering_info(item)
+        offering_id = offering_info["id"]
 
         # Check if the offering has been already loaded in the system
         if len(Offering.objects.filter(off_id=offering_id)) > 0:
@@ -174,6 +180,7 @@ class OrderingManager:
             )
 
         # Validate that all pricing fields match
+        # MATCHING NO LONGER NEEDED ONLY ID IS PROVIDED NOW
         if (
             offering_pricing["priceType"].lower() != product_price["priceType"].lower()
             or (
@@ -213,61 +220,95 @@ class OrderingManager:
 
         return product_price
 
+    def _filter_item(self, item):
+        # Get the product offering
+        offering_info = self._get_offering_info(item)
+
+        product_price = None
+        if "itemTotalPrice" in item and len(item["itemTotalPrice"]) > 0 and "productOfferingPrice" in item["itemTotalPrice"][0]:
+            product_price = item["itemTotalPrice"][0]["productOfferingPrice"]
+
+        # Check if the product price has not been included but must
+        if product_price is None and len(offering_info["productOfferingPrice"]):
+            raise OrderingError(f"The price model has not been included for productOrderItem {item['id']}")
+
+        # If the price plan is custom, the item is not processed
+        catalog = urlparse(settings.CATALOG)
+        price_url = "{}://{}{}/{}".format(
+            catalog.scheme, catalog.netloc, catalog.path + "/productOfferingPrice", product_price["id"]
+        )
+        offering_pricing = self._download(price_url, "product offering price", product_price["id"])
+
+        if offering_pricing["priceType"].lower() == "custom":
+            return None, offering_info
+
+        return Contract(
+            item_id=item["id"],
+            pricing_model=product_price,
+            offering=offering_info["id"],
+            options=item.get("product", {}).get("productCharacteristic", []),
+        ), offering_info
+
     def _build_contract(self, item):
         # Build offering
         offering, offering_info = self._get_offering(item)
 
-        # Check if the product price has not been include but must
-        if ("product" not in item or "productPrice" not in item["product"] or not len(item["product"]["productPrice"])) and \
-                len(offering_info["productOfferingPrice"]) and not offering.is_custom:
+        # Now pricing is taken from a different field
+        #
+        product_price = None
+        if "itemTotalPrice" in item and len(item["itemTotalPrice"]) > 0 and "productOfferingPrice" in item["itemTotalPrice"][0]:
+            product_price = item["itemTotalPrice"][0]["productOfferingPrice"]
+
+        # Check if the product price has not been included but must
+        if product_price is None and len(offering_info["productOfferingPrice"]) and not offering.is_custom:
             raise OrderingError(f"The price model has not been included for productOrderItem {item['id']}")
 
         # Build pricing if included
         pricing = {}
-        if "product" in item and "productPrice" in item["product"] and len(item["product"]["productPrice"]):
+        if product_price is not None:
             if offering.is_custom:
                 raise OrderingError(f"Custom pricing models are handled externally, please don't include a price in product")
 
-            model_mapper = {
-                "one time": "single_payment",
-                "recurring": "subscription",
-                "usage": "pay_per_use",
-            }
+            # model_mapper = {
+            #     "one time": "single_payment",
+            #     "recurring": "subscription",
+            #     "usage": "pay_per_use",
+            # }
 
-            price = self._get_effective_pricing(item["id"], item["product"]["productPrice"][0], offering_info)
+            # price = self._get_effective_pricing(item["id"], item["product"]["productPrice"][0], offering_info)
 
-            price_unit = self._parse_price(model_mapper, price)
+            # price_unit = self._parse_price(model_mapper, price)
 
-            pricing["general_currency"] = price["price"]["taxIncludedAmount"]["unit"]
-            pricing[model_mapper[price["priceType"].lower()]] = [price_unit]
+            # pricing["general_currency"] = price["price"]["taxIncludedAmount"]["unit"]
+            # pricing[model_mapper[price["priceType"].lower()]] = [price_unit]
 
-            # Process price alterations
-            # TODO: Current implementation of the Catalog API does not support price alterations
-            if "productOfferPriceAlteration" in price:
-                alteration = price["productOfferPriceAlteration"]
+            # # Process price alterations
+            # # TODO: Current implementation of the Catalog API does not support price alterations
+            # if "productOfferPriceAlteration" in price:
+            #     alteration = price["productOfferPriceAlteration"]
 
-                # Check type of alteration (discount or fee)
-                if "discount" in alteration["name"].lower() and "fee" not in alteration["name"].lower():
-                    # Is a discount
-                    pricing["alteration"] = self._parse_alteration(alteration, "discount")
+            #     # Check type of alteration (discount or fee)
+            #     if "discount" in alteration["name"].lower() and "fee" not in alteration["name"].lower():
+            #         # Is a discount
+            #         pricing["alteration"] = self._parse_alteration(alteration, "discount")
 
-                elif "discount" not in alteration["name"].lower() and "fee" in alteration["name"].lower():
-                    # Is a fee
-                    if "priceCondition" not in alteration or not len(alteration["priceCondition"]):
-                        # In this case the alteration is processed as another price
-                        price_unit = self._parse_price(model_mapper, alteration)
+            #     elif "discount" not in alteration["name"].lower() and "fee" in alteration["name"].lower():
+            #         # Is a fee
+            #         if "priceCondition" not in alteration or not len(alteration["priceCondition"]):
+            #             # In this case the alteration is processed as another price
+            #             price_unit = self._parse_price(model_mapper, alteration)
 
-                        if model_mapper[alteration["priceType"].lower()] not in pricing:
-                            pricing[model_mapper[alteration["priceType"].lower()]] = []
+            #             if model_mapper[alteration["priceType"].lower()] not in pricing:
+            #                 pricing[model_mapper[alteration["priceType"].lower()]] = []
 
-                        pricing[model_mapper[alteration["priceType"].lower()]].append(price_unit)
-                    else:
-                        pricing["alteration"] = self._parse_alteration(alteration, "fee")
-                else:
-                    logger.error("Invalid price alteration")
-                    raise OrderingError(
-                        "Invalid price alteration, it is not possible to determine if it is a discount or a fee"
-                    )
+            #             pricing[model_mapper[alteration["priceType"].lower()]].append(price_unit)
+            #         else:
+            #             pricing["alteration"] = self._parse_alteration(alteration, "fee")
+            #     else:
+            #         logger.error("Invalid price alteration")
+            #         raise OrderingError(
+            #             "Invalid price alteration, it is not possible to determine if it is a discount or a fee"
+            #         )
 
         # Calculate the revenue sharing class
         # revenue_class = offering_info["serviceCandidate"]["id"]
@@ -313,21 +354,38 @@ class OrderingManager:
             "country": postal_address["country"],
         }
 
-    def _process_add_items(self, items, order_id, description, terms_accepted, billing_account):
-        new_contracts = [self._build_contract(item) for item in items]
+    def _terms_found(self, offering_info):
+        return "productOfferingTerm" in offering_info and len(offering_info["productOfferingTerm"]) > 0
+
+    def _filter_add_items(self, items):
+        process_items = []
+        for item in items:
+            new_contract, offering_info = self._filter_item(item)
+            if new_contract is not None:
+                process_items.append({
+                    'item': item,
+                    'offering_info': offering_info,
+                    'contract': new_contract
+                })
+
+        return process_items
+
+    def _process_add_items(self, item_info, order, description, terms_accepted):
+        order_id = order["id"]
+        billing_account = order["billingAccount"]
 
         terms_found = False
-        for c in new_contracts:
-            off = Offering.objects.get(pk=ObjectId(c.offering))
-            if off.asset is not None and off.asset.has_terms:
-                terms_found = True
+        new_contracts = []
+        for item in item_info:
+            terms_found = terms_found or self._terms_found(item["offering_info"])
+            new_contracts.append(item["contract"])
 
-        if terms_found and not terms_accepted:
-            logger.error("Terms and conditions of the offering not accepted")
-            raise OrderingError("You must accept the terms and conditions of the offering to acquire it")
+        # if terms_found and not terms_accepted:
+        #     logger.error("Terms and conditions of the offering not accepted")
+        #     raise OrderingError("You must accept the terms and conditions of the offering to acquire it")
 
         current_org = self._customer.userprofile.current_organization
-        order = Order.objects.create(
+        order_obj = Order.objects.create(
             order_id=order_id,
             customer=self._customer,
             owner_organization=current_org,
@@ -338,10 +396,10 @@ class OrderingManager:
             description=description,
         )
 
-        self.rollback_logger["models"].append(order)
+        self.rollback_logger["models"].append(order_obj)
 
-        charging_engine = ChargingEngine(order)
-        return charging_engine.resolve_charging()
+        charging_engine = ChargingEngine(order_obj)
+        return charging_engine.resolve_charging(raw_order=order)
 
     def _get_existing_contract(self, inv_client, product_id):
         # Get product info
@@ -461,9 +519,18 @@ class OrderingManager:
             if "billingAccount" not in order:
                 raise OrderingError("Missing billing account in product order")
 
-            redirection_url = self._process_add_items(
-                items["add"], order["id"], description, terms_accepted, order["billingAccount"]
-            )
+            # Filter out the items that are not going to be processed
+            process_items = self._filter_add_items(items["add"])
+
+            if len(process_items) == 0:
+                # No contracts to process
+                return None
+
+            ordering_client = OrderingClient()
+            # Update status of items to be processed
+            ordering_client.update_items_state(order, "inProgress", items=[item["item"] for item in process_items])
+
+            redirection_url = self._process_add_items(process_items, order, description, terms_accepted)
 
         return redirection_url
 
@@ -521,6 +588,7 @@ class OrderingManager:
             product["productOffering"] = orderItem["productOffering"]
 
             product["realizingResource"] = [{"id": resource, "href": resource} for resource in resources]
+            product["realizingService"] = [{"id": service, "href": service} for service in services]
 
             # This cannot work until the Service Intentory API is published
             if "productCharacteristic" not in product:
@@ -528,14 +596,14 @@ class OrderingManager:
 
             product["productCharacteristic"].extend([{"name": "service", "value": service}] for service in services)
 
-            # product["realizingService"] = [{
-            #     "id": service,
-            #     "href": service
-            # } for service in services]
+            if "itemTotalPrice" in orderItem:
+                product["productPrice"] = orderItem["itemTotalPrice"]
+
+            product["billingAccount"] = order["billingAccount"]
 
             new_product = inventory_client.create_product(product)
 
-            self.activate_product(order["id"], new_product)
+            # self.activate_product(order["id"], new_product)
 
     def activate_product(self, order_id, product):
         # Get order

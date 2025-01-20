@@ -60,7 +60,8 @@ class OrderingCollection(Resource):
             return build_response(request, 400, "The provided data is not a valid JSON object")
 
         client = OrderingClient()
-        client.update_items_state(order, "inProgress")
+        # we are not setting all the items as inProgress
+        # client.update_items_state(order, "inProgress")
 
         terms_accepted = request.META.get("HTTP_X_TERMS_ACCEPTED", "").lower() == "true"
 
@@ -81,12 +82,8 @@ class OrderingCollection(Resource):
             else:
                 # All the order items are free so digital assets can be set as Completed
                 digital_items = []
-                order_model = Order.objects.get(order_id=order["id"])
 
                 for item in order["productOrderItem"]:
-                    contract = order_model.get_item_contract(item["id"])
-                    offering = Offering.objects.get(pk=ObjectId(contract.offering))
-
                     # if offering.is_digital:
                     #    digital_items.append(item)
                     digital_items.append(item)
@@ -94,6 +91,7 @@ class OrderingCollection(Resource):
 
                 client.update_items_state(order, "completed", digital_items)
 
+                # TODO: This only is triggered if the activation need to be done
                 try:
                     om.notify_completed(order)
                 except:

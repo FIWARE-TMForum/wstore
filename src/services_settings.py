@@ -43,3 +43,5 @@ ORDERING = "http://host.docker.internal:8634"
 BILLING = "http://host.docker.internal:8639"
 USAGE = "http://host.docker.internal:8637"
 AUTHORIZE_SERVICE = "http://proxy.docker:8004/authorizeService/apiKeys"
+
+DOME_BILLING_URL = "http://billing-engine-svc.billing.svc.cluster.local:8080"

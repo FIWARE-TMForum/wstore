@@ -70,6 +70,8 @@ class Contract(models.Model):
 
     # Parsed version of the pricing model used to calculate charges
     pricing_model = models.JSONField(default={})  # Dict
+    options = models.JSONField(default={})  # Dict
+
     # Date of the last charge to the customer
     last_charge = models.DateTimeField(blank=True, null=True)
     # List with the made charges
