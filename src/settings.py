@@ -206,6 +206,7 @@ CRONJOBS = [
 CLIENTS = {
     "paypal": "wstore.charging_engine.payment_client.paypal_client.PayPalClient",
     "stripe": "wstore.charging_engine.payment_client.stripe_client.StripeClient",
+    "dpas": "wstore.charging_engine.payment_client.dpas_client.DpasClient",
     None: "wstore.charging_engine.payment_client.payment_client.PaymentClient",
 }
 
