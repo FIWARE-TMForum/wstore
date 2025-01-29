@@ -20,6 +20,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from copy import deepcopy
 from datetime import datetime
 from uuid import uuid4
 from urllib.parse import urljoin, urlparse
@@ -241,7 +242,7 @@ class InventoryClient:
             return [price["id"]]
 
     def build_product_model(self, order_item, order_id, billing_account):
-        product = order_item["product"]
+        product = deepcopy(order_item["product"])
 
         product["name"] = "oid={}".format(order_id)
         product["status"] = "created"
