@@ -171,24 +171,25 @@ def _execute_asset_event(asset, order, contract, type_):
 
 
 def process_product_notification(order, contract, type_):
+    pass
     # Get digital asset from the contract
-    offering_assets = []
-    offering = Offering.objects.get(pk=ObjectId(contract.offering))
+    # offering_assets = []
+    # offering = Offering.objects.get(pk=ObjectId(contract.offering))
 
-    if len(offering.bundled_offerings) > 0:
-        offering_assets = [
-            Offering.objects.get(pk=ObjectId(key)).asset
-            for key in offering.bundled_offerings
-            if Offering.objects.get(pk=ObjectId(key)).is_digital
-        ]
+    # if len(offering.bundled_offerings) > 0:
+    #     offering_assets = [
+    #         Offering.objects.get(pk=ObjectId(key)).asset
+    #         for key in offering.bundled_offerings
+    #         if Offering.objects.get(pk=ObjectId(key)).is_digital
+    #     ]
 
-    elif offering.is_digital:
-        offering_assets = [offering.asset]
+    # elif offering.is_digital:
+    #     offering_assets = [offering.asset]
 
-    assets = _expand_bundled_assets(offering_assets)
+    # assets = _expand_bundled_assets(offering_assets)
 
-    for event_asset in assets:
-        _execute_asset_event(event_asset, order, contract, type_)
+    # for event_asset in assets:
+    #     _execute_asset_event(event_asset, order, contract, type_)
 
 
 def on_product_acquired(order, contract):

@@ -100,8 +100,11 @@ class InventoryClient:
         # Build product url
         url = self._inventory_api + "/product/" + str(product_id)
 
-        response = requests.patch(url, json=patch_body)
-        response.raise_for_status()
+        try:
+            response = requests.patch(url, json=patch_body)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            raise
 
         return response.json()
 
@@ -222,4 +225,31 @@ class InventoryClient:
         inv_response = requests.post(resource_url, json=service, verify=settings.VERIFY_REQUESTS)
         inv_service = inv_response.json()
         return inv_service["id"]
-    
+
+
+    def build_product_model(self, order_item, order_id, billing_account):
+        product = order_item["product"]
+
+        product["name"] = "oid={}".format(order_id)
+        product["status"] = "created"
+        product["productOffering"] = order_item["productOffering"]
+
+        if "productCharacteristic" not in product:
+                product["productCharacteristic"] = []
+
+        if "itemTotalPrice" in order_item:
+            product["productPrice"] = order_item["itemTotalPrice"]
+
+        product["billingAccount"] = billing_account
+
+        # Add the referred type
+        product["relatedParty"] = [
+            {
+                "id": party["id"],
+                "href": party["href"],
+                "role": party["role"],
+                "@referredType": "organization"
+            } for party in product["relatedParty"]
+        ]
+
+        return product

@@ -19,8 +19,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import requests
+import json
 
 from django.conf import settings
+from logging import getLogger
+
+from wstore.charging_engine.charging.billing_client import BillingClient
+from wstore.ordering.inventory_client import InventoryClient
+
+logger = getLogger("wstore.default_logger")
 
 
 class DomeEngine:
@@ -28,7 +35,15 @@ class DomeEngine:
         self._order = order
 
     def end_charging(self, transactions, free_contracts, concept):
+        # set the order as paid
+        # Update renovation dates
+        # Update applied customer billing rates
         pass
+
+    def _get_item(self, item_id, raw_order):
+        items = [item for item in raw_order["productOrderItem"] if item["id"] == item_id]
+
+        return items[0] if items else None
 
     def _build_item(self, contract):
         return {
@@ -49,25 +64,42 @@ class DomeEngine:
 
     def resolve_charging(self, type_="initial", related_contracts=None, raw_order=None):
         # Use the dome billing engine to resolve the charging
-        url = settings.DOME_BILLING_URL + "/price/order"
-        
-        data = {
-            "productOrderItem": [self._build_item(contract) for contract in self._order.contracts],
-            "relatedParty": [{
-                'id': party['id'],
-                'href': party['href'],
-                'role': party['role'],
-                '@referredType': 'organization'
-            } for party in raw_order["relatedParty"]],
-            "billingAccount": raw_order["billingAccount"]
-        }
+        url = settings.DOME_BILLING_URL + "/billing/instantBill"
 
-        resp = requests.post(url, json=data)
-        resp.raise_for_status()
+        # The billing engine processes the products one by one
+        inventory = InventoryClient()
 
-        # TODO: Integrate the payment process
-        response = resp.json()
-        prices = response["orderTotalPrice"]
+        # TODO: Potentially another filter needs to be included as
+        # recurring postpaid and usage models are not paid now
+        new_contracts = []
+        billing_client = BillingClient()
+        for contract in self._order.contracts:
+            data = inventory.build_product_model(
+                    self._get_item(contract.item_id, raw_order), raw_order["id"], raw_order["billingAccount"])
 
-        # Only one time and recurring-prepaid models need to be paid now
+            logger.info("Calling the billing engine with " + json.dumps(data))
+
+            resp = requests.post(url, json=data)
+            resp.raise_for_status()
+
+            response = resp.json()
+
+            logger.info("Received response " + json.dumps(response))
+
+            # Create the Billing rates as not billed
+            inv_ids = billing_client.create_batch_customer_rates(response)
+
+            contract.applied_rates = inv_ids
+            new_contracts.append(contract)
+
+        # Update the order with the new contracts
+        self._order.contracts = new_contracts
+        self._order.save()
+
+        # TODO: Check the local charging for info on the db objects that needs to be created for the payment
+
+        # Call the payment gateway
+        # Return the redirect URL to process the payment
+
+        logger.info("Billing processed")
         return None

@@ -88,8 +88,6 @@ class OrderingClient:
         :return:
         """
 
-        self.update_state(order, state)
-
         # Build patch body
         patch = {
             "productOrderItem": [],
@@ -111,3 +109,7 @@ class OrderingClient:
 
         r = requests.patch(url, json=patch)
         r.raise_for_status()
+
+    def update_all_states(self, order, state):
+        self.update_items_state(order, state)
+        self.update_state(order, state)
