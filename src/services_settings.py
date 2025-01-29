@@ -30,18 +30,24 @@ CATALOG = "http://host.docker.internal:8632"
 RESOURCE_CATALOG = "http://tmforum-tm-forum-api-resource-catalog:8080"
 #RESOURCE_CATALOG = "http://host.docker.internal:8636"
 
-SERVICE_CATALOG = "http://tmforum-tm-forum-api-service-catalog:8080"
-#SERVICE_CATALOG = "http://host.docker.internal:8637"
+#SERVICE_CATALOG = "http://tmforum-tm-forum-api-service-catalog:8080"
+SERVICE_CATALOG = "http://host.docker.internal:8637"
 
 INVENTORY = "http://host.docker.internal:8635"
-RESOURCE_INVENTORY = "http://tmforum-tm-forum-api-resource-inventory:8080"
-#RESOURCE_INVENTORY = "http://host.docker.internal:8641"
+#RESOURCE_INVENTORY = "http://tmforum-tm-forum-api-resource-inventory:8080"
+RESOURCE_INVENTORY = "http://host.docker.internal:8641"
 
 SERVICE_INVENTORY = "http://host.docker.internal:8640"
 
 ORDERING = "http://host.docker.internal:8634"
-BILLING = "http://host.docker.internal:8639"
+
+ACCOUNT = "http://host.docker.internal:8639"
+
+BILLING = "http://host.docker.internal:8640"
+
 USAGE = "http://host.docker.internal:8637"
 AUTHORIZE_SERVICE = "http://proxy.docker:8004/authorizeService/apiKeys"
 
-DOME_BILLING_URL = "http://billing-engine-svc.billing.svc.cluster.local:8080"
+#DOME_BILLING_URL = "http://host.docker.internal:8099"
+
+DOME_BILLING_URL = "http://host.docker.internal:3333"

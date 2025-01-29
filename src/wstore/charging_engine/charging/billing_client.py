@@ -21,11 +21,16 @@
 
 
 import requests
+import datetime
+
 from decimal import Decimal
+from logging import getLogger
 from urllib.parse import urljoin, urlparse
 
 from django.conf import settings
 
+
+logger = getLogger("wstore.default_logger")
 
 class BillingClient:
     def __init__(self):
@@ -34,12 +39,100 @@ class BillingClient:
             self._billing_api += "/"
 
     def get_billing_account(self, account_id):
-        url = '{}billingAccount/{}'.format(self._billing_api, account_id)
+        account_api = settings.ACCOUNT
+        if not account_api.endswith("/"):
+            account_api += "/"
+
+        url = '{}billingAccount/{}'.format(account_api, account_id)
 
         response = requests.get(url, verify=settings.VERIFY_REQUESTS)
         response.raise_for_status()
 
         return response.json()
+
+    def update_customer_rate(self, rate_id, product_id):
+        # TODO: To be able to se the isBilled, the bill needs to be created
+        data = {
+            "isBilled": True,
+            "product": {
+                "id": product_id,
+                "href": product_id
+            }
+        }
+
+        url = '{}appliedCustomerBillingRate/{}'.format(self._billing_api, rate_id)
+
+        try:
+            response = requests.patch(url, json=data, verify=settings.VERIFY_REQUESTS)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.error("Error updating customer rate: " + str(e))
+            raise
+
+    def create_customer_rate(self, rate_type, currency, tax_rate, tax, tax_included, tax_excluded, billing_account, coverage_period=None):
+        # TODO: Billing address and dates
+        data = {
+            # "appliedBillingRateType": rate_type,
+            "type": rate_type,
+            "isBilled": False,
+            "date": datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+            "appliedTax": [{
+                "taxCategory": "VAT",
+                "taxRate": tax_rate,
+                "taxAmount": {
+                    "unit": currency,
+                    "value": tax
+                }
+            }],
+            "taxIncludedAmount": {
+                "unit": currency,
+                "value": tax_included
+            },
+            "taxExcludedAmount": {
+                "unit": currency,
+                "value": tax_excluded
+            },
+            "billingAccount": billing_account
+        }
+
+        if coverage_period is not None:
+            data["periodCoverage"] = coverage_period
+
+        url = '{}appliedCustomerBillingRate'.format(self._billing_api)
+
+        try:
+            response = requests.post(url, json=data, verify=settings.VERIFY_REQUESTS)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.error("Error creating customer rate: " + str(e))
+            raise
+
+        return response.json()
+
+    def create_batch_customer_rates(self, rates):
+        rate_ids = []
+        for rate in rates:
+            if "appliedBillingRateType" in rate:
+                rate_type = rate["appliedBillingRateType"]
+            else:
+                rate_type = rate["type"]
+
+            currency = rate["taxIncludedAmount"]["unit"]
+            tax_rate = rate["appliedTax"][0]["taxRate"]
+            tax = rate["appliedTax"][0]["taxAmount"]["value"]
+            tax_included = rate["taxIncludedAmount"]["value"]
+            tax_excluded = rate["taxExcludedAmount"]["value"]
+            billing_account = rate["billingAccount"]
+
+            coverage_period = rate["periodCoverage"] if "periodCoverage" in rate else None
+
+            new_rate = self.create_customer_rate(
+                rate_type, currency, tax_rate, tax, tax_included, tax_excluded,
+                billing_account, coverage_period=coverage_period)
+
+            rate_ids.append(new_rate["id"])
+
+        return rate_ids
 
     def create_charge(self, charge_model, product_id, start_date=None, end_date=None):
         # This Object is now part of the CustomerBillManagement API, not yet integrated

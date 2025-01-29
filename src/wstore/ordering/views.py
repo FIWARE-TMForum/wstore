@@ -65,6 +65,8 @@ class OrderingCollection(Resource):
 
         terms_accepted = request.META.get("HTTP_X_TERMS_ACCEPTED", "").lower() == "true"
 
+        logger.info("New product order received: {}".format(order["id"]))
+
         try:
             response = None
             om = OrderingManager()
@@ -89,8 +91,6 @@ class OrderingCollection(Resource):
                     digital_items.append(item)
                     ### Asumming all the offers in the system are digital
 
-                client.update_items_state(order, "completed", digital_items)
-
                 # TODO: This only is triggered if the activation need to be done
                 try:
                     om.notify_completed(order)
@@ -102,10 +102,10 @@ class OrderingCollection(Resource):
 
         except OrderingError as e:
             response = build_response(request, 400, str(e.value))
-            client.update_items_state(order, "failed")
+            client.update_all_states(order, "failed")
         except Exception as e:
             response = build_response(request, 500, "Your order could not be processed")
-            client.update_items_state(order, "failed")
+            client.update_all_states(order, "failed")
 
         return response
 

@@ -239,7 +239,7 @@ class OrderingManager:
         )
         offering_pricing = self._download(price_url, "product offering price", product_price["id"])
 
-        if offering_pricing["priceType"].lower() == "custom":
+        if "priceType" in offering_pricing and offering_pricing["priceType"].lower() == "custom":
             return None, offering_info
 
         return Contract(
@@ -396,6 +396,8 @@ class OrderingManager:
             description=description,
         )
 
+        logger.info("Order model created in the database")
+
         self.rollback_logger["models"].append(order_obj)
 
         charging_engine = ChargingEngine(order_obj)
@@ -521,6 +523,7 @@ class OrderingManager:
 
             # Filter out the items that are not going to be processed
             process_items = self._filter_add_items(items["add"])
+            logger.info("Items are being processed")
 
             if len(process_items) == 0:
                 # No contracts to process
@@ -529,6 +532,9 @@ class OrderingManager:
             ordering_client = OrderingClient()
             # Update status of items to be processed
             ordering_client.update_items_state(order, "inProgress", items=[item["item"] for item in process_items])
+            ordering_client.update_state(order, "inProgress")
+
+            logger.info("Status of orders and items set to inProgress")
 
             redirection_url = self._process_add_items(process_items, order, description, terms_accepted)
 
@@ -536,7 +542,17 @@ class OrderingManager:
 
     def notify_completed(self, order):
         # Process product order items to instantiate the inventory
+        # Get order from the database
+        order_model = Order.objects.get(order_id=order["id"])
+
+        processed_items = []
         for orderItem in order["productOrderItem"]:
+            contracts = [ cnt for cnt in order_model.get_contracts() if cnt.item_id == orderItem["id"] ]
+            if len(contracts) == 0:
+                continue
+
+            contract = contracts[0]
+
             # Get product specification
             # TODO: Add service and resource candidates to the product offering
             catalog = urlparse(settings.CATALOG)
@@ -552,7 +568,7 @@ class OrderingManager:
             services = []
             inventory_client = InventoryClient()
 
-            product = orderItem["product"]
+            product = inventory_client.build_product_model(orderItem, order["id"], order["billingAccount"])
 
             customer_party = None
             for party in product["relatedParty"]:
@@ -583,27 +599,29 @@ class OrderingManager:
                         for service in spec_info["serviceSpecification"]
                     ]
 
-            product["name"] = "oid={}".format(order["id"])
-            product["status"] = "created"
-            product["productOffering"] = orderItem["productOffering"]
-
             product["realizingResource"] = [{"id": resource, "href": resource} for resource in resources]
             product["realizingService"] = [{"id": service, "href": service} for service in services]
 
             # This cannot work until the Service Intentory API is published
-            if "productCharacteristic" not in product:
-                product["productCharacteristic"] = []
-
             product["productCharacteristic"].extend([{"name": "service", "value": service}] for service in services)
 
-            if "itemTotalPrice" in orderItem:
-                product["productPrice"] = orderItem["itemTotalPrice"]
-
-            product["billingAccount"] = order["billingAccount"]
-
+            logger.info("Creating product in the inventory")
             new_product = inventory_client.create_product(product)
 
-            # self.activate_product(order["id"], new_product)
+            # Update the billing
+            for inv_id in contract.applied_rates:
+                billing_client = BillingClient()
+                # billing_client.update_customer_rate(inv_id, new_product["id"])
+
+            logger.info("Rates updates")
+            self.activate_product(order["id"], new_product)
+            processed_items.append(orderItem)
+
+        ordering_client = OrderingClient()
+        ordering_client.update_items_state(order, "completed", items=processed_items)
+        logger.info("Items completed")
+
+        # TODO: When to update the status of the order?
 
     def activate_product(self, order_id, product):
         # Get order
@@ -613,8 +631,7 @@ class OrderingManager:
         # Search contract
         new_contracts = []
         for cont in order.get_contracts():
-            off = Offering.objects.get(pk=ObjectId(cont.offering))
-            if product["productOffering"]["id"] == off.off_id:
+            if product["productOffering"]["id"] == cont.offering:
                 contract = cont
 
             new_contracts.append(cont)
@@ -640,6 +657,7 @@ class OrderingManager:
         inventory_client.activate_product(product["id"])
 
         # Create the initial charge in the billing API
+        ## TODO: This is going to be created with the applied customer billing rates generated by the billing engine
         if contract.charges is not None and len(contract.charges) == 1:
             billing_client = BillingClient()
             valid_to = None
