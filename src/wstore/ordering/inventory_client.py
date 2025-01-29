@@ -226,6 +226,19 @@ class InventoryClient:
         inv_service = inv_response.json()
         return inv_service["id"]
 
+    def get_list_of_prices(self, price_model):
+        catalog = urlparse(settings.CATALOG)
+        price_url = "{}://{}{}/{}".format(
+            catalog.scheme, catalog.netloc, catalog.path + "/productOfferingPrice", price_model["id"]
+        )
+        resp = requests.get(price_url, verify=settings.VERIFY_REQUESTS)
+
+        price = resp.json()
+
+        if "isBundle" in price and price["isBundle"]:
+            return [bundle["id"] for bundle in price["bundledPopRelationship"]]
+        else:
+            return [price["id"]]
 
     def build_product_model(self, order_item, order_id, billing_account):
         product = order_item["product"]
@@ -237,8 +250,15 @@ class InventoryClient:
         if "productCharacteristic" not in product:
                 product["productCharacteristic"] = []
 
-        if "itemTotalPrice" in order_item:
-            product["productPrice"] = order_item["itemTotalPrice"]
+        if "itemTotalPrice" in order_item and len(order_item["itemTotalPrice"]) > 0:
+            prices = self.get_list_of_prices(order_item["itemTotalPrice"][0]["productOfferingPrice"])
+
+            product["productPrice"] = [{
+                "productOfferingPrice": {
+                    "id": price,
+                    "href": price
+                }
+            } for price in prices]
 
         product["billingAccount"] = billing_account
 
