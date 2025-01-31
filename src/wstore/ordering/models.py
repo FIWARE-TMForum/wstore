@@ -125,7 +125,8 @@ class Order(models.Model):
     contracts = models.ArrayField(model_container=Contract)
 
     # Pending payment info used in asynchronous charges
-    pending_payment = models.EmbeddedField(model_container=Payment, null=True)
+    # pending_payment = models.EmbeddedField(model_container=Payment, null=True)
+    pending_payment = models.JSONField(default={})
 
     objects = models.DjongoManager()
 

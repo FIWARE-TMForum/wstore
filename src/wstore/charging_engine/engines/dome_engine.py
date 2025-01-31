@@ -22,6 +22,7 @@ import requests
 import json
 from decimal import Decimal
 
+from django.db.utils import DatabaseError
 from django.conf import settings
 from logging import getLogger
 
@@ -98,8 +99,8 @@ class DomeEngine:
 
             transactions.extend([{
                 "item": contract.item_id,
-                "price": Decimal(rate["taxIncludedAmount"]["value"]),
-                "duty_free": Decimal(rate["taxExcludedAmount"]["value"]),
+                "price": rate["taxIncludedAmount"]["value"],
+                "duty_free": rate["taxExcludedAmount"]["value"],
                 "description": '',
                 "currency": rate["taxIncludedAmount"]["unit"],
                 "related_model": ''
@@ -107,7 +108,17 @@ class DomeEngine:
 
         # Update the order with the new contracts
         self._order.contracts = new_contracts
-        self._order.save()
+        pending_payment = {  # Payment model
+            "transactions": transactions,
+            "concept": 'initial',
+            "free_contracts": [],
+        }
+
+        self._order.pending_payment = pending_payment
+        try:
+            self._order.save()
+        except DatabaseError as e:
+            raise
 
         # TODO: Check the local charging for info on the db objects that needs to be created for the payment
 

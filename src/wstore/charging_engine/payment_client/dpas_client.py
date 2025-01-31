@@ -27,6 +27,13 @@ class DpasClient(PaymentClient):
             total += Decimal(t["price"])
 
         redirect_uri = settings.SITE
+        if redirect_uri[-1] != "/":
+            redirect_uri += "/"
+
+        redirect_uri += "checkout?client=dpas"
+        return_url = redirect_uri + "&action=accept&ref=" + str(self._order.pk)
+        cancel_url = redirect_uri + "&action=cancel&ref=" + str(self._order.pk)
+
         payload = {
             "externalId": str(self._order.order_id),
             "customerId": self._order.customer_id, 
@@ -40,8 +47,8 @@ class DpasClient(PaymentClient):
                 "recurring" : False,
                 "productProviderSpecificData": {}
             }],
-            "processSuccessUrl": redirect_uri,
-            "processErrorUrl": redirect_uri
+            "processSuccessUrl": return_url,
+            "processErrorUrl": cancel_url
         }
 
         try:
@@ -52,8 +59,8 @@ class DpasClient(PaymentClient):
         except requests.RequestException as e:
             logger.debug(f"Error contacting payment API: {e}")
 
-    def end_redirection_payment(self, token, payer_id):
-        pass
+    def end_redirection_payment(self, **kwargs):
+        return []
 
     def refund(self, sale_id):
         pass

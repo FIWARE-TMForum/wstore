@@ -61,8 +61,8 @@ def build_response(request, status_code, msg, extra_formats=None, headers=None):
         mimetype = mimeparser.best_match(formatters.keys(), request.META.get("HTTP_ACCEPT", "text/plain"))
 
     response = HttpResponse(
-        formatters[mimetype](request, mimetype, status_code, msg),
-        content_type=mimetype,
+        get_json_response(request, mimetype, status_code, msg),
+        content_type="application/json; charset=utf-8",
         status=status_code,
     )
     if headers is None:

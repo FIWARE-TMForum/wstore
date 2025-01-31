@@ -61,7 +61,7 @@ class PaymentConfirmation(Resource):
 
         # Oder Items state is not checked
         # self.ordering_client.update_items_state(raw_order, 'InProgress', digital_items)
-        self.ordering_client.update_items_state(raw_order, "completed", digital_items)
+        # self.ordering_client.update_items_state(raw_order, "completed", digital_items)
 
         # Notify order completed
         try:
