@@ -50,13 +50,37 @@ class BillingClient:
 
         return response.json()
 
+    def create_customer_bill(self):
+        # FIXME: This objects is being created with the minum information
+        # We will need to add here the payment information and the invoice
+        # numbers
+        url = '{}customerBill'.format(self._billing_api)
+        data = {
+            "billDate": datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+        }
+
+        try:
+            response = requests.post(url, json=data, verify=settings.VERIFY_REQUESTS)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.error("Error creating customer bill: " + str(e))
+            raise
+
+        return response.json()["id"]
+
     def update_customer_rate(self, rate_id, product_id):
         # TODO: To be able to se the isBilled, the bill needs to be created
+        bill_id = self.create_customer_bill()
+
         data = {
             "isBilled": True,
             "product": {
                 "id": product_id,
                 "href": product_id
+            },
+            "bill": {
+                "id": bill_id,
+                "href": bill_id
             }
         }
 

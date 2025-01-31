@@ -9,7 +9,7 @@ from logging import getLogger
 
 logger = getLogger("wstore.default_logger")
 
-DPAS_CLIENT_API_URL = os.environ.get("BAE_CB_DPAS_CLIENT_API_URL")
+DPAS_CLIENT_API_URL = os.environ.get("BAE_CB_DPAS_CLIENT_API_URL", "https://dpas-sbx.egroup.hu/api/payment-start")
 
 class DpasClient(PaymentClient):
     _checkout_url = None
@@ -26,6 +26,7 @@ class DpasClient(PaymentClient):
                 raise PaymentError("The payment cannot be created: Multiple currencies")
             total += Decimal(t["price"])
 
+        redirect_uri = settings.SITE
         payload = {
             "externalId": str(self._order.order_id),
             "customerId": self._order.customer_id, 
@@ -34,16 +35,19 @@ class DpasClient(PaymentClient):
             "invoiceId": "invoice id", # should be the order's invoice ID
             "paymentItems": [{
                 "productProviderId": "1", # should be the product provider's ID
-                "amount": total,
+                "amount": str(total),
                 "currency": current_curr,
                 "recurring" : False,
                 "productProviderSpecificData": {}
-            }]
+            }],
+            "processSuccessUrl": redirect_uri,
+            "processErrorUrl": redirect_uri
         }
 
         try:
             response = requests.post(self.api_url, json=payload)
             self._checkout_url = response.json()["redirectUrl"]
+            return self._checkout_url
 
         except requests.RequestException as e:
             logger.debug(f"Error contacting payment API: {e}")

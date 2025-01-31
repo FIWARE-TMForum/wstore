@@ -73,6 +73,7 @@ class OrderingCollection(Resource):
             redirect_url = om.process_order(user, order, terms_accepted=terms_accepted)
 
             if redirect_url is not None:
+                logger.info("Order items set as pending: {}".format(order["id"]))
                 client.update_items_state(order, "pending")
 
                 response = HttpResponse(

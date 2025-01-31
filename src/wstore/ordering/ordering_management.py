@@ -599,8 +599,11 @@ class OrderingManager:
                         for service in spec_info["serviceSpecification"]
                     ]
 
-            product["realizingResource"] = [{"id": resource, "href": resource} for resource in resources]
-            product["realizingService"] = [{"id": service, "href": service} for service in services]
+            if len(resources) > 0:
+                product["realizingResource"] = [{"id": resource, "href": resource} for resource in resources]
+
+            if len(services) > 0:
+                product["realizingService"] = [{"id": service, "href": service} for service in services]
 
             # This cannot work until the Service Intentory API is published
             product["productCharacteristic"].extend([{"name": "service", "value": service}] for service in services)
@@ -611,7 +614,7 @@ class OrderingManager:
             # Update the billing
             for inv_id in contract.applied_rates:
                 billing_client = BillingClient()
-                # billing_client.update_customer_rate(inv_id, new_product["id"])
+                billing_client.update_customer_rate(inv_id, new_product["id"])
 
             logger.info("Rates updates")
             self.activate_product(order["id"], new_product)

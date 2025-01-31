@@ -20,12 +20,15 @@
 
 import requests
 import json
+from decimal import Decimal
 
 from django.conf import settings
 from logging import getLogger
 
 from wstore.charging_engine.charging.billing_client import BillingClient
 from wstore.ordering.inventory_client import InventoryClient
+from wstore.charging_engine.payment_client.payment_client import PaymentClient
+
 
 logger = getLogger("wstore.default_logger")
 
@@ -72,6 +75,7 @@ class DomeEngine:
         # TODO: Potentially another filter needs to be included as
         # recurring postpaid and usage models are not paid now
         new_contracts = []
+        transactions = []
         billing_client = BillingClient()
         for contract in self._order.contracts:
             data = inventory.build_product_model(
@@ -92,14 +96,30 @@ class DomeEngine:
             contract.applied_rates = inv_ids
             new_contracts.append(contract)
 
+            transactions.extend([{
+                "item": contract.item_id,
+                "price": Decimal(rate["taxIncludedAmount"]["value"]),
+                "duty_free": Decimal(rate["taxExcludedAmount"]["value"]),
+                "description": '',
+                "currency": rate["taxIncludedAmount"]["unit"],
+                "related_model": ''
+            } for rate in response])
+
         # Update the order with the new contracts
         self._order.contracts = new_contracts
         self._order.save()
 
         # TODO: Check the local charging for info on the db objects that needs to be created for the payment
 
-        # Call the payment gateway
-        # Return the redirect URL to process the payment
+        # Load payment client
+        payment_client = PaymentClient.get_payment_client_class()
 
+        # build the payment client
+        client = payment_client(self._order)
+
+        # Call the payment gateway
+        client.start_redirection_payment(transactions)
+
+        # Return the redirect URL to process the payment
         logger.info("Billing processed")
-        return None
+        return client.get_checkout_url()
