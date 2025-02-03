@@ -29,6 +29,7 @@ from logging import getLogger
 from wstore.charging_engine.charging.billing_client import BillingClient
 from wstore.ordering.inventory_client import InventoryClient
 from wstore.charging_engine.payment_client.payment_client import PaymentClient
+from wstore.charging_engine.pricing_engine import PriceEngine
 
 
 logger = getLogger("wstore.default_logger")
@@ -37,6 +38,7 @@ logger = getLogger("wstore.default_logger")
 class DomeEngine:
     def __init__(self, order):
         self._order = order
+        self._price_engine = PriceEngine()
 
     def end_charging(self, transactions, free_contracts, concept):
         # set the order as paid
@@ -66,6 +68,46 @@ class DomeEngine:
             }
         }
 
+    def _build_charges(self, item, billing_account):
+        prices = self._price_engine.calculate_prices({
+            "productOrderItem": [item]
+        })
+
+        # Only prices to be paid now are considered
+        rates = []
+        for price in prices:
+            if price["priceType"].lower() == "one time" or price["priceType"].lower() == "recurring-prepaid":
+                currency = price["price"]["dutyFreeAmount"]["unit"]
+                inc = Decimal(price["price"]["taxIncludedAmount"]["value"])
+                excl = Decimal(price["price"]["dutyFreeAmount"]["value"])
+
+                tax = str(inc - excl)
+                rates.append({
+                    "appliedBillingRateType": "Initial",
+                    "isBilled": False,
+                    "appliedTax": [
+                        {
+                            "taxCategory": 'VAT',
+                            "taxRate": price["price"]["taxRate"],
+                            "taxAmount": {
+                                "unit": currency,
+                                "value": tax
+                            }
+                        }
+                    ],
+                    "taxIncludedAmount": {
+                        "unit": currency,
+                        "value": price["price"]["taxIncludedAmount"]["value"]
+                    },
+                    "taxExcludedAmount": {
+                        "unit": currency,
+                        "value": price["price"]["dutyFreeAmount"]["value"]
+                    },
+                    "billingAccount": billing_account
+                })
+        return rates
+        
+
     def resolve_charging(self, type_="initial", related_contracts=None, raw_order=None):
         # Use the dome billing engine to resolve the charging
         url = settings.DOME_BILLING_URL + "/billing/instantBill"
@@ -79,32 +121,41 @@ class DomeEngine:
         transactions = []
         billing_client = BillingClient()
         for contract in self._order.contracts:
+            item = self._get_item(contract.item_id, raw_order)
             data = inventory.build_product_model(
-                    self._get_item(contract.item_id, raw_order), raw_order["id"], raw_order["billingAccount"])
+                    item, raw_order["id"], raw_order["billingAccount"])
 
             logger.info("Calling the billing engine with " + json.dumps(data))
 
-            resp = requests.post(url, json=data)
-            resp.raise_for_status()
+            # TODO: Call the billing engine when working
+            # resp = requests.post(url, json=data)
+            # resp.raise_for_status()
 
-            response = resp.json()
+            # response = resp.json()
+            ##############
+            response = self._build_charges(item, raw_order["billingAccount"])
+            ##############
 
-            logger.info("Received response " + json.dumps(response))
+            if len(response) > 0:
+                logger.info("Received response " + json.dumps(response))
 
-            # Create the Billing rates as not billed
-            inv_ids = billing_client.create_batch_customer_rates(response)
+                # Create the Billing rates as not billed
+                inv_ids = billing_client.create_batch_customer_rates(response)
 
-            contract.applied_rates = inv_ids
-            new_contracts.append(contract)
+                contract.applied_rates = inv_ids
+                new_contracts.append(contract)
 
-            transactions.extend([{
-                "item": contract.item_id,
-                "price": rate["taxIncludedAmount"]["value"],
-                "duty_free": rate["taxExcludedAmount"]["value"],
-                "description": '',
-                "currency": rate["taxIncludedAmount"]["unit"],
-                "related_model": ''
-            } for rate in response])
+                transactions.extend([{
+                    "item": contract.item_id,
+                    "price": rate["taxIncludedAmount"]["value"],
+                    "duty_free": rate["taxExcludedAmount"]["value"],
+                    "description": '',
+                    "currency": rate["taxIncludedAmount"]["unit"],
+                    "related_model": ''
+                } for rate in response])
+
+        if len(transactions) == 0:
+            return None
 
         # Update the order with the new contracts
         self._order.contracts = new_contracts
