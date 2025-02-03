@@ -93,7 +93,7 @@ class BillingClient:
             logger.error("Error updating customer rate: " + str(e))
             raise
 
-    def create_customer_rate(self, rate_type, currency, tax_rate, tax, tax_included, tax_excluded, billing_account, coverage_period=None):
+    def create_customer_rate(self, rate_type, currency, tax_rate, tax, tax_included, tax_excluded, billing_account, coverage_period=None, parties=None):
         # TODO: Billing address and dates
         data = {
             # "appliedBillingRateType": rate_type,
@@ -122,6 +122,10 @@ class BillingClient:
         if coverage_period is not None:
             data["periodCoverage"] = coverage_period
 
+        if parties is not None:
+            data["relatedParty"] = parties
+            data["@schemaLocation"] = "https://raw.githubusercontent.com/DOME-Marketplace/dome-odrl-profile/refs/heads/add-related-party-ref/schemas/simplified/RelatedPartyRef.schema.json"
+
         url = '{}appliedCustomerBillingRate'.format(self._billing_api)
 
         try:
@@ -133,7 +137,7 @@ class BillingClient:
 
         return response.json()
 
-    def create_batch_customer_rates(self, rates):
+    def create_batch_customer_rates(self, rates, parties):
         rate_ids = []
         for rate in rates:
             if "appliedBillingRateType" in rate:
@@ -152,7 +156,7 @@ class BillingClient:
 
             new_rate = self.create_customer_rate(
                 rate_type, currency, tax_rate, tax, tax_included, tax_excluded,
-                billing_account, coverage_period=coverage_period)
+                billing_account, coverage_period=coverage_period, parties=parties)
 
             rate_ids.append(new_rate["id"])
 

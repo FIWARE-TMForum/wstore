@@ -140,7 +140,7 @@ class DomeEngine:
                 logger.info("Received response " + json.dumps(response))
 
                 # Create the Billing rates as not billed
-                inv_ids = billing_client.create_batch_customer_rates(response)
+                inv_ids = billing_client.create_batch_customer_rates(response, data['relatedParty'])
 
                 contract.applied_rates = inv_ids
                 new_contracts.append(contract)
