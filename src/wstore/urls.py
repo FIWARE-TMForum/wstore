@@ -98,6 +98,10 @@ urlpatterns = [
         charging_views.PaymentRefund(permitted_methods=("POST",)),
     ),
     url(
+        r"^charging/api/orderManagement/orders/preview/?$",
+        charging_views.PaymentPreview(permitted_methods=("POST",)),
+    ),
+    url(
         r"^charging/api/orderManagement/products/?$",
         ordering_views.InventoryCollection(permitted_methods=("POST",)),
     ),

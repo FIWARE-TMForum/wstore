@@ -236,10 +236,11 @@ class InventoryClient:
 
         price = resp.json()
 
+        result = [price["id"]]
         if "isBundle" in price and price["isBundle"]:
-            return [bundle["id"] for bundle in price["bundledPopRelationship"]]
-        else:
-            return [price["id"]]
+            result.extend([bundle["id"] for bundle in price["bundledPopRelationship"]])
+
+        return result
 
     def build_product_model(self, order_item, order_id, billing_account):
         product = deepcopy(order_item["product"])
