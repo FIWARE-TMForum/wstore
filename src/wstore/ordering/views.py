@@ -73,8 +73,8 @@ class OrderingCollection(Resource):
             redirect_url = om.process_order(user, order, terms_accepted=terms_accepted)
 
             if redirect_url is not None:
-                logger.info("Order items set as pending: {}".format(order["id"]))
-                client.update_items_state(order, "pending")
+                # logger.info("Order items set as pending: {}".format(order["id"]))
+                # client.update_items_state(order, "pending")
 
                 response = HttpResponse(
                     json.dumps({"redirectUrl": redirect_url}),
@@ -83,16 +83,7 @@ class OrderingCollection(Resource):
                 )
 
             else:
-                # All the order items are free so digital assets can be set as Completed
-                digital_items = []
-
-                for item in order["productOrderItem"]:
-                    # if offering.is_digital:
-                    #    digital_items.append(item)
-                    digital_items.append(item)
-                    ### Asumming all the offers in the system are digital
-
-                # TODO: This only is triggered if the activation need to be done
+                # Trigger the notification, the process will check the procurement mode
                 try:
                     om.notify_completed(order)
                 except:

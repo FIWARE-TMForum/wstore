@@ -220,6 +220,12 @@ class OrderingManager:
 
         return product_price
 
+    def _get_mode(self, offering_info):
+        if "productOfferingTerm" in offering_info:
+            for term in offering_info["productOfferingTerm"]:
+                if term["name"].lower() == "procurement" and term["description"].lower() == "manual":
+                    return term["description"].lower()
+
     def _filter_item(self, item):
         # Get the product offering
         offering_info = self._get_offering_info(item)
@@ -239,15 +245,23 @@ class OrderingManager:
         )
         offering_pricing = self._download(price_url, "product offering price", product_price["id"])
 
-        if "priceType" in offering_pricing and offering_pricing["priceType"].lower() == "custom":
-            return None, offering_info
+        mode = self._get_mode(offering_info)
+        if mode is None:
+            mode = "manual"
+        elif mode not in ["manual", "payment-automatic", "automatic"]:
+            raise OrderingError(f"The procurement mode {mode} is not supported")
+
+        if ("priceType" in offering_pricing and offering_pricing["priceType"].lower() == "custom") or \
+                mode == "manual":
+
+            return None, offering_info, mode
 
         return Contract(
             item_id=item["id"],
             pricing_model=product_price,
             offering=offering_info["id"],
             options=item.get("product", {}).get("productCharacteristic", []),
-        ), offering_info
+        ), offering_info, mode
 
     def _build_contract(self, item):
         # Build offering
@@ -360,12 +374,13 @@ class OrderingManager:
     def _filter_add_items(self, items):
         process_items = []
         for item in items:
-            new_contract, offering_info = self._filter_item(item)
+            new_contract, offering_info, mode = self._filter_item(item)
             if new_contract is not None:
                 process_items.append({
                     'item': item,
                     'offering_info': offering_info,
-                    'contract': new_contract
+                    'contract': new_contract,
+                    'mode': mode
                 })
 
         return process_items
@@ -526,7 +541,7 @@ class OrderingManager:
             logger.info("Items are being processed")
 
             if len(process_items) == 0:
-                # No contracts to process
+                # No contracts to process, all the items as manual
                 return None
 
             ordering_client = OrderingClient()
@@ -541,6 +556,11 @@ class OrderingManager:
         return redirection_url
 
     def notify_completed(self, order):
+        #####
+        ### TODO: We need to refactor this method to create the inventory items when the
+        ### Product order is completed for other methods
+        #####
+
         # Process product order items to instantiate the inventory
         # Get order from the database
         order_model = Order.objects.get(order_id=order["id"])
@@ -554,7 +574,6 @@ class OrderingManager:
             contract = contracts[0]
 
             # Get product specification
-            # TODO: Add service and resource candidates to the product offering
             catalog = urlparse(settings.CATALOG)
 
             offering_id = orderItem["productOffering"]["href"]
@@ -563,6 +582,16 @@ class OrderingManager:
             )
 
             offering_info = self._download(offering_url, "product offering", orderItem["id"])
+
+            if "productOfferingTerm" in offering_info:
+                mode = 'manual'
+                for term in offering_info["productOfferingTerm"]:
+                    if term["name"].lower() == "procurement" and term["description"].lower() != "automatic":
+                        mode = term["description"].lower()
+                        break
+
+                if mode != 'automatic':
+                    continue
 
             resources = []
             services = []

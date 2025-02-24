@@ -169,9 +169,9 @@ class PaymentConfirmation(Resource):
         # If the order state value is different from pending means that
         # the timeout function has completely ended before acquiring the resource
         # so _lock is set to false and the view ends
-        if pre_value["state"] != "pending":
-            db.wstore_order.find_one_and_update({"_id": ObjectId(reference)}, {"$set": {"_lock": False}})
-            raise PaymentTimeoutError("The timeout set to process the payment has finished")
+        # if pre_value["state"] != "pending":
+        #     db.wstore_order.find_one_and_update({"_id": ObjectId(reference)}, {"$set": {"_lock": False}})
+        #     raise PaymentTimeoutError("The timeout set to process the payment has finished")
 
         # Check that the request user is authorized to end the payment
         if request_user.userprofile.current_organization != order.owner_organization or request_user != order.customer:
@@ -332,7 +332,6 @@ class PaymentPreview(Resource):
         }
         except:
             return build_response(request, 400, "Invalid order format")
-        
 
         # Check if a discount needs to be applied
         return HttpResponse(
